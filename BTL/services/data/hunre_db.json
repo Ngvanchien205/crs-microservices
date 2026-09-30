@@ -5,22 +5,24 @@
       "student_code": "20211001",
       "full_name": "Nguyễn Văn An",
       "email": "an.nv@hunre.edu.vn",
-      "trust_score": 520,
+      "trust_score": 525,
       "campus": "CS1_HA_NOI",
       "wallet_balance": 500000.0,
       "role": "STUDENT",
-      "faculty": "Công nghệ Thông tin"
+      "faculty": "Công nghệ Thông tin",
+      "status": "ACTIVE"
     },
     {
       "id": 2,
       "student_code": "20211002",
       "full_name": "Trần Thị Bích",
       "email": "bich.tt@hunre.edu.vn",
-      "trust_score": 480,
+      "trust_score": 485,
       "campus": "CS1_HA_NOI",
       "wallet_balance": 250000.0,
       "role": "STUDENT",
-      "faculty": "Môi trường"
+      "faculty": "Môi trường",
+      "status": "ACTIVE"
     },
     {
       "id": 3,
@@ -31,7 +33,8 @@
       "campus": "CS1_HA_NOI",
       "wallet_balance": 120000.0,
       "role": "STUDENT",
-      "faculty": "Khí tượng Thủy văn"
+      "faculty": "Khí tượng Thủy văn",
+      "status": "BLOCKED"
     },
     {
       "id": 4,
@@ -42,10 +45,43 @@
       "campus": "CS1_HA_NOI",
       "wallet_balance": 0.0,
       "role": "HUB_STAFF",
-      "faculty": "Đoàn Thanh Niên"
+      "faculty": "Đoàn Thanh Niên",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 99,
+      "student_code": "ADMIN001",
+      "full_name": "Quản Trị Viên HUNRE",
+      "email": "admin@hunre.edu.vn",
+      "trust_score": 1000,
+      "campus": "CS1_HA_NOI",
+      "wallet_balance": 10000000.0,
+      "role": "ADMIN",
+      "faculty": "Phòng Đào Tạo & CTSV",
+      "status": "ACTIVE"
     }
   ],
   "products": [
+    {
+      "id": 4,
+      "seller_id": 1,
+      "seller_name": "Nguyễn Văn An",
+      "category_id": "BOOKS",
+      "category_name": "Giáo Trình & Tài Liệu",
+      "title": "Giao trinh Toan Cao Cap A1 (Chuan HUNRE)",
+      "description": "Sản phẩm chính chủ sinh viên HUNRE.",
+      "original_price": 70000.0,
+      "current_price": 60000.0,
+      "floor_price": 50000.0,
+      "condition_grade": "GRADE_A",
+      "ai_defect_score": 0.05,
+      "ai_inspection_summary": "Đã được AI thẩm định",
+      "is_barter_eligible": 1,
+      "desired_exchange_items": "Casio 580",
+      "image_url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop",
+      "status": "ACTIVE",
+      "created_at": "2026-09-30 07:22:44"
+    },
     {
       "id": 1,
       "seller_id": 1,
@@ -124,7 +160,7 @@
       "size_type": "MEDIUM",
       "description": "Cỡ Vừa (Bàn phím DareU)",
       "status": "OCCUPIED",
-      "current_order": "ORD-HUNRE-98471"
+      "current_order": "ORD-OCCUPIED"
     },
     {
       "id": 3,
@@ -132,8 +168,8 @@
       "locker_code": "LOCKER-M-02",
       "size_type": "MEDIUM",
       "description": "Cỡ Vừa (Laptop / Casio)",
-      "status": "EMPTY",
-      "current_order": null
+      "status": "OCCUPIED",
+      "current_order": "ORD-OCCUPIED"
     },
     {
       "id": 4,
@@ -141,8 +177,8 @@
       "locker_code": "LOCKER-L-01",
       "size_type": "LARGE",
       "description": "Cỡ Lớn (Màn hình / Case)",
-      "status": "EMPTY",
-      "current_order": null
+      "status": "OCCUPIED",
+      "current_order": "ORD-OCCUPIED"
     }
   ],
   "escrow_orders": {
@@ -162,6 +198,295 @@
       "status": "STORED_AT_HUB",
       "deadline": "17:30 ngày 18/09/2026",
       "created_at": "2026-09-16 11:00:00"
+    },
+    "ORD-HUNRE-27764": {
+      "order_code": "ORD-HUNRE-27764",
+      "buyer_id": 3,
+      "buyer_name": "Lê Hoàng Cường",
+      "seller_id": 2,
+      "seller_name": "Trần Thị Bích",
+      "product_id": 2,
+      "product_title": "Máy tính Casio FX 580VN X (Like New)",
+      "hub_id": 1,
+      "hub_name": "Trạm Hub CS1 (Nhà A - Văn Phòng Đoàn Trường)",
+      "locker_code": "LOCKER-M-02",
+      "escrow_amount": 320000.0,
+      "saga_step": 7,
+      "status": "DISPUTED",
+      "deadline": "17:30 ngày mai",
+      "created_at": "2026-09-30 07:22:44"
+    },
+    "DH20260930-7789": {
+      "order_code": "DH20260930-7789",
+      "buyer_id": 1,
+      "buyer_name": "Nguyen Van An",
+      "seller_id": 3,
+      "seller_name": "Lê Hoàng Cường",
+      "product_id": 2,
+      "product_title": "May tinh Casio fx-580VNX",
+      "hub_id": 1,
+      "hub_name": "Trạm Hub CS1 (Nhà A - Văn Phòng Đoàn Trường)",
+      "locker_code": "LOCKER-M-02",
+      "escrow_amount": 378000.0,
+      "saga_step": 2,
+      "status": "DEPOSITED",
+      "deadline": "17:30 ngày mai",
+      "created_at": "2026-09-30 07:23:09"
     }
+  },
+  "carts": {
+    "1": []
+  },
+  "orders": [
+    {
+      "id": 5,
+      "order_code": "DH20260930-7789",
+      "user_id": 2,
+      "customer_name": "Le Hoang Cuong",
+      "customer_phone": "0983334455",
+      "shipping_address": "KTX Khu B HUNRE",
+      "shipping_method": "GHN_DELIVERY",
+      "shipping_fee": 25000.0,
+      "items": [
+        {
+          "product_id": 1,
+          "title": "Giao trinh",
+          "price": 45000,
+          "quantity": 1
+        }
+      ],
+      "items_total": 45000,
+      "discount_amount": 0.0,
+      "voucher_code": null,
+      "total_price": 70000.0,
+      "gateway": "COD",
+      "status": "delivering",
+      "payment_status": "paid",
+      "note": "",
+      "created_at": "2026-09-30 07:23:09",
+      "admin_note": "Shipper GHN dang lay hang",
+      "updated_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 4,
+      "order_code": "DH20260930-7789",
+      "user_id": 1,
+      "customer_name": "Tran Thi Bich",
+      "customer_phone": "0982223344",
+      "shipping_address": "41A Phu Dien",
+      "shipping_method": "GHN_DELIVERY",
+      "shipping_fee": 25000.0,
+      "items": [
+        {
+          "product_id": 3,
+          "title": "Balo sinh vien",
+          "price": 120000,
+          "quantity": 1
+        }
+      ],
+      "items_total": 120000,
+      "discount_amount": 0.0,
+      "voucher_code": null,
+      "total_price": 145000.0,
+      "gateway": "MOMO",
+      "status": "pending",
+      "payment_status": "pending",
+      "note": "",
+      "created_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 3,
+      "order_code": "DH20260930-7789",
+      "user_id": 1,
+      "customer_name": "Nguyen Van An",
+      "customer_phone": "0981112233",
+      "shipping_address": "KTX HUNRE Nha B3",
+      "shipping_method": "HUB_PICKUP",
+      "shipping_fee": 0.0,
+      "items": [
+        {
+          "product_id": 2,
+          "title": "May tinh Casio fx-580VNX",
+          "price": 420000,
+          "quantity": 1
+        }
+      ],
+      "items_total": 420000,
+      "discount_amount": 42000.0,
+      "voucher_code": "HUNRE2026",
+      "total_price": 378000.0,
+      "gateway": "ESCROW",
+      "status": "pending",
+      "payment_status": "paid",
+      "note": "",
+      "created_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 1,
+      "order_code": "DH20260916-0001",
+      "user_id": 1,
+      "customer_name": "Nguyễn Văn An",
+      "customer_phone": "0981234567",
+      "shipping_address": "Ký túc xá Đại học Tài nguyên và Môi trường Hà Nội",
+      "shipping_method": "HUB_PICKUP",
+      "shipping_fee": 0.0,
+      "items": [
+        {
+          "product_id": 3,
+          "title": "Bàn phím cơ DareU EK87 Blue Switch",
+          "price": 250000.0,
+          "quantity": 1
+        }
+      ],
+      "items_total": 250000.0,
+      "discount_amount": 0.0,
+      "voucher_code": null,
+      "total_price": 250000.0,
+      "gateway": "ESCROW",
+      "status": "delivering",
+      "payment_status": "paid",
+      "note": "Nhận tại ô tủ LOCKER-M-01",
+      "created_at": "2026-09-16 11:00:00"
+    },
+    {
+      "id": 2,
+      "order_code": "DH20260918-0002",
+      "user_id": 2,
+      "customer_name": "Trần Thị Bích",
+      "customer_phone": "0912345678",
+      "shipping_address": "Số 41A đường Phú Diễn, Bắc Từ Liêm, Hà Nội",
+      "shipping_method": "GHN_DELIVERY",
+      "shipping_fee": 25000.0,
+      "items": [
+        {
+          "product_id": 1,
+          "title": "Giáo trình Cơ Sở Dữ Liệu & SQL (HUNRE)",
+          "price": 75000.0,
+          "quantity": 1
+        }
+      ],
+      "items_total": 75000.0,
+      "discount_amount": 10000.0,
+      "voucher_code": "HUNRE2026",
+      "total_price": 90000.0,
+      "gateway": "COD",
+      "status": "pending",
+      "payment_status": "pending",
+      "note": "Giao tận tay trong giờ hành chính",
+      "created_at": "2026-09-18 14:30:00"
+    }
+  ],
+  "payment_transactions": [
+    {
+      "id": 5,
+      "order_code": "DH20260930-7789",
+      "gateway": "cod",
+      "amount": 70000.0,
+      "status": "paid",
+      "result_code": 0,
+      "message": "Chờ thu tiền mặt khi giao hàng (COD)",
+      "paid_at": "2026-09-30 07:23:09",
+      "created_at": "2026-09-30 07:23:09",
+      "updated_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 4,
+      "order_code": "DH20260930-7789",
+      "gateway": "momo",
+      "amount": 145000.0,
+      "status": "pending",
+      "result_code": 0,
+      "message": "Khởi tạo giao dịch MoMo Sandbox",
+      "paid_at": null,
+      "created_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 3,
+      "order_code": "DH20260930-7789",
+      "gateway": "escrow",
+      "amount": 378000.0,
+      "status": "paid",
+      "result_code": 0,
+      "message": "Thanh toán Ký Quỹ thành công",
+      "paid_at": "2026-09-30 07:23:09",
+      "created_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 1,
+      "order_code": "DH20260916-0001",
+      "gateway": "escrow",
+      "amount": 250000.0,
+      "status": "paid",
+      "result_code": 0,
+      "message": "Đã khóa tiền ký quỹ Smart Escrow thành công",
+      "paid_at": "2026-09-16 11:01:00",
+      "created_at": "2026-09-16 11:00:00"
+    },
+    {
+      "id": 2,
+      "order_code": "DH20260918-0002",
+      "gateway": "cod",
+      "amount": 90000.0,
+      "status": "pending",
+      "result_code": 0,
+      "message": "Chờ thu tiền mặt khi giao hàng (COD)",
+      "paid_at": null,
+      "created_at": "2026-09-18 14:30:00"
+    }
+  ],
+  "vouchers": [
+    {
+      "code": "HUNRE2026",
+      "discount_percent": 10,
+      "discount_amount": 0,
+      "min_order_value": 50000.0,
+      "description": "Giảm 10% đơn từ 50.000đ chào năm học mới"
+    },
+    {
+      "code": "TANSINHVIEN",
+      "discount_percent": 0,
+      "discount_amount": 20000.0,
+      "min_order_value": 100000.0,
+      "description": "Giảm 20.000đ cho đơn hàng từ 100.000đ"
+    },
+    {
+      "code": "FREESHIP_HUB",
+      "discount_percent": 0,
+      "discount_amount": 25000.0,
+      "min_order_value": 0.0,
+      "description": "Miễn phí vận chuyển nhận hàng tại Trạm Hub CS1"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 2,
+      "product_id": 1,
+      "user_id": 1,
+      "user_name": "Nguyễn Văn An",
+      "rating": 5,
+      "comment": "Giao trinh rat dep va day du chuong",
+      "created_at": "2026-09-30 07:23:09"
+    },
+    {
+      "id": 1,
+      "product_id": 1,
+      "user_id": 2,
+      "user_name": "Trần Thị Bích",
+      "rating": 5,
+      "comment": "Sách rất mới, đầy đủ đề cương ôn tập môn CSDL của thầy cô HUNRE. Rất đáng tiền!",
+      "created_at": "2026-09-17 16:20:00"
+    }
+  ],
+  "wishlists": {
+    "1": [
+      2
+    ],
+    "2": [
+      1,
+      3
+    ]
+  },
+  "config": {
+    "gemini_api_key": ""
   }
 }

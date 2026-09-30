@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUNRE Admin Portal - Quản Trị Đơn Hàng & Tài Chính</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- SIDEBAR -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>HUNRE ADMIN</h2>
+                    <span>Portal Lab 08 & 09</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">QUẢN TRỊ HỆ THỐNG</div>
+                <button class="nav-item active" onclick="switchTab('orders', this)">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                    <span>Xử Lý Đơn Hàng (Lab 08)</span>
+                    <span class="badge" id="ordersCountBadge">0</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('finance', this)">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Tài Chính & Doanh Thu (Lab 09)</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('users', this)">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Người Dùng & KYC (Lab 03)</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('products', this)">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Danh Mục & Sản Phẩm (Lab 02)</span>
+                </button>
+
+                <div class="nav-section-title">CHUYỂN GIAO DIỆN</div>
+                <a href="/" class="nav-item external-link">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Chợ Sinh Viên (Student)</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square link-icon"></i>
+                </a>
+                <a href="/staff" class="nav-item external-link">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>Trạm Hub Scanner (PWA)</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square link-icon"></i>
+                </a>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="user-avatar"><i class="fa-solid fa-user-shield"></i></div>
+                <div class="user-info">
+                    <strong>Admin HUNRE</strong>
+                    <span>Phòng CTSV CS1</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="admin-main">
+            <!-- TOPBAR -->
+            <header class="admin-topbar">
+                <div class="topbar-title">
+                    <h1 id="pageTitle">Quản Lý & Xử Lý Đơn Hàng (Lab 08)</h1>
+                    <p id="pageSubtitle">Theo dõi trạng thái đơn hàng theo 8 tabs quy chuẩn và điều phối luồng giao nhận</p>
+                </div>
+                <div class="topbar-actions">
+                    <div class="status-indicator">
+                        <span class="pulse-dot"></span> Gateway :8000 Online
+                    </div>
+                    <button class="btn btn-refresh" onclick="refreshCurrentView()">
+                        <i class="fa-solid fa-arrows-rotate"></i> Làm mới
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB 1: QUẢN LÝ ĐƠN HÀNG (LAB 08) -->
+            <section id="viewOrders" class="admin-view active">
+                <!-- 8 Tabs Bar chuẩn Lab 08 -->
+                <div class="order-tabs-bar">
+                    <button class="tab-btn active" data-tab="all" onclick="filterOrderTab('all', this)">
+                        <i class="fa-solid fa-layer-group"></i> Tất cả <span class="tab-count" id="count-all">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="pending" onclick="filterOrderTab('pending', this)">
+                        <i class="fa-solid fa-clock"></i> Chờ xử lý <span class="tab-count" id="count-pending">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="ready" onclick="filterOrderTab('ready', this)">
+                        <i class="fa-solid fa-box"></i> Chờ lấy hàng <span class="tab-count" id="count-ready">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="picking" onclick="filterOrderTab('picking', this)">
+                        <i class="fa-solid fa-truck-ramp-box"></i> Đang lấy <span class="tab-count" id="count-picking">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="delivering" onclick="filterOrderTab('delivering', this)">
+                        <i class="fa-solid fa-truck-fast"></i> Đang giao <span class="tab-count" id="count-delivering">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="delivered" onclick="filterOrderTab('delivered', this)">
+                        <i class="fa-solid fa-circle-check"></i> Thành công <span class="tab-count" id="count-delivered">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="return" onclick="filterOrderTab('return', this)">
+                        <i class="fa-solid fa-rotate-left"></i> Hoàn hàng <span class="tab-count" id="count-return">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="cancelled" onclick="filterOrderTab('cancelled', this)">
+                        <i class="fa-solid fa-ban"></i> Đã hủy <span class="tab-count" id="count-cancelled">0</span>
+                    </button>
+                </div>
+
+                <!-- Filters & Search Toolbar -->
+                <div class="toolbar-card">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="orderSearchInput" placeholder="Tìm theo mã đơn (DH...), tên người nhận, SĐT..." oninput="handleOrderSearch(event)">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="gatewayFilter" onchange="loadAdminOrders()">
+                            <option value="">-- Tất cả cổng thanh toán --</option>
+                            <option value="escrow">Ký Quỹ Smart Escrow</option>
+                            <option value="momo">Ví MoMo Sandbox</option>
+                            <option value="cod">Tiền mặt khi giao (COD)</option>
+                        </select>
+                        <select id="shippingFilter" onchange="loadAdminOrders()">
+                            <option value="">-- Phương thức nhận hàng --</option>
+                            <option value="HUB_PICKUP">Nhận tại Trạm Hub CS1 (0đ)</option>
+                            <option value="GHN_DELIVERY">Giao Hàng Nhanh (GHN)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Orders Table Card -->
+                <div class="data-card">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã Đơn Hàng</th>
+                                    <th>Khách Hàng / SĐT</th>
+                                    <th>Phương Thức Nhận</th>
+                                    <th>Tổng Tiền</th>
+                                    <th>Cổng Thanh Toán</th>
+                                    <th>Trạng Thái Đơn</th>
+                                    <th>Thanh Toán</th>
+                                    <th>Thao Tác (Lab 08)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminOrdersTbody">
+                                <tr>
+                                    <td colspan="8" class="text-center loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu đơn hàng...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TÀI CHÍNH & DOANH THU (LAB 09) -->
+            <section id="viewFinance" class="admin-view">
+                <!-- 6 KPI CARDS -->
+                <div class="kpi-grid">
+                    <div class="kpi-card glow-green">
+                        <div class="kpi-header">
+                            <span>TỔNG DOANH THU PHÁT SINH</span>
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiGrossRevenue">0đ</div>
+                        <div class="kpi-sub">Tổng giá trị tất cả các đơn đặt hàng</div>
+                    </div>
+                    <div class="kpi-card glow-blue">
+                        <div class="kpi-header">
+                            <span>DOANH THU THỰC NHẬN</span>
+                            <i class="fa-solid fa-vault"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiNetRevenue">0đ</div>
+                        <div class="kpi-sub">Tiền đã giải ngân hoặc thu tiền thành công</div>
+                    </div>
+                    <div class="kpi-card glow-amber">
+                        <div class="kpi-header">
+                            <span>TIỀN COD ĐANG CHỜ THU</span>
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiPendingCod">0đ</div>
+                        <div class="kpi-sub">Đơn COD đang giao chưa đối soát tiền mặt</div>
+                    </div>
+                    <div class="kpi-card glow-purple">
+                        <div class="kpi-header">
+                            <span>KÝ QUỸ ĐANG PHONG TỎA</span>
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiEscrowHolding">0đ</div>
+                        <div class="kpi-sub">Smart Escrow bảo vệ tiền người mua tại Hub</div>
+                    </div>
+                    <div class="kpi-card glow-red">
+                        <div class="kpi-header">
+                            <span>SỐ TIỀN HOÀN TRẢ (REFUND)</span>
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiRefunded">0đ</div>
+                        <div class="kpi-sub">Số tiền hoàn cọc khi khiếu nại thành công</div>
+                    </div>
+                    <div class="kpi-card glow-cyan">
+                        <div class="kpi-header">
+                            <span>GIÁ TRỊ TRUNG BÌNH (AOV)</span>
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <div class="kpi-value" id="kpiAov">0đ</div>
+                        <div class="kpi-sub">Giá trị giao dịch trung bình mỗi đơn</div>
+                    </div>
+                </div>
+
+                <!-- Bảng Kê Nhật Ký Giao Dịch (Payment Transactions) -->
+                <div class="data-card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-file-invoice-dollar"></i> Bảng Kê Giao Dịch & Đối Soát COD (Lab 09)</h3>
+                        <span class="badge badge-info">Đối soát tài chính thời gian thực</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Mã Đơn Hàng</th>
+                                    <th>Cổng Giao Dịch</th>
+                                    <th>Số Tiền</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Thời Gian Thanh Toán</th>
+                                    <th>Đối Soát COD (Lab 09)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financeTransactionsTbody">
+                                <tr>
+                                    <td colspan="7" class="text-center loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu giao dịch...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: NGƯỜI DÙNG & KYC (LAB 03) -->
+            <section id="viewUsers" class="admin-view">
+                <div class="data-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-users"></i> Danh Sách Sinh Viên & Quản Trị Viên HUNRE</h3>
+                        <span class="badge badge-info">Xác thực KYC Email @hunre.edu.vn</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Mã Sinh Viên</th>
+                                    <th>Họ Và Tên</th>
+                                    <th>Email Trường</th>
+                                    <th>Khoa / Đơn Vị</th>
+                                    <th>Điểm Uy Tín</th>
+                                    <th>Bậc Xếp Hạng</th>
+                                    <th>Vai Trò</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Hành Động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersTbody">
+                                <tr>
+                                    <td colspan="10" class="text-center loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách người dùng...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: DANH MỤC & SẢN PHẨM (LAB 02) -->
+            <section id="viewProducts" class="admin-view">
+                <div class="data-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-boxes-stacked"></i> Thống Kê Danh Mục & Sản Phẩm Sàn HUNRE</h3>
+                        <span class="badge badge-info">CRUD Danh Mục & Tồn Kho (Lab 02)</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Hình Ảnh</th>
+                                    <th>Tên Sản Phẩm</th>
+                                    <th>Danh Mục</th>
+                                    <th>Giá Bán</th>
+                                    <th>Giá Sàn</th>
+                                    <th>Độ Mới (AI)</th>
+                                    <th>Người Đăng</th>
+                                    <th>Trạng Thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminProductsTbody">
+                                <tr>
+                                    <td colspan="9" class="text-center loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách sản phẩm...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL XỬ LÝ TRẠNG THÁI ĐƠN HÀNG (LAB 08) -->
+    <div class="modal-overlay" id="orderStatusModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeOrderStatusModal()">&times;</button>
+            <h3><i class="fa-solid fa-pen-to-square"></i> Cập Nhật Trạng Thái Đơn Hàng</h3>
+            <p id="modalOrderInfo" style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;"></p>
+
+            <div class="form-group">
+                <label>Trạng Thái Mới (Lab 08):</label>
+                <select id="modalStatusSelect" class="form-control" onchange="checkCancelWarning()">
+                    <option value="pending">pending - Chờ xử lý</option>
+                    <option value="ready">ready - Chờ lấy hàng</option>
+                    <option value="picking">picking - Đang lấy hàng</option>
+                    <option value="delivering">delivering - Đang giao hàng / Lưu Hub</option>
+                    <option value="delivered">delivered - Giao thành công / Giải ngân</option>
+                    <option value="return">return - Hoàn hàng</option>
+                    <option value="cancelled">cancelled - Hủy đơn hàng</option>
+                </select>
+            </div>
+
+            <!-- CẢNH BÁO QUY TẮC NGHIỆP VỤ LAB 08 -->
+            <div id="cancelWarningAlert" style="display: none; padding: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; font-size: 12.5px; margin-bottom: 16px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> <strong>Cảnh Báo Nghiệp Vụ Lab 08:</strong> Đơn hàng đang trong trạng thái lấy hàng hoặc vận chuyển, hệ thống sẽ chặn không cho phép hủy đơn!
+            </div>
+
+            <div class="form-group">
+                <label>Ghi chú của Quản trị viên:</label>
+                <input type="text" id="modalAdminNote" class="form-control" placeholder="Ví dụ: Đã bàn giao cho Shipper / Đã kiểm tra đồ">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitOrderStatusUpdate()">
+                    <i class="fa-solid fa-check"></i> Lưu Trạng Thái
+                </button>
+                <button class="btn btn-secondary" onclick="closeOrderStatusModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer"></div>
+
+    <!-- Admin JS -->
+    <script src="js/admin.js"></script>
+</body>
+</html>

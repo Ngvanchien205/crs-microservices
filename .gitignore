@@ -34,3 +34,9 @@ dist-ssr/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Large documentation PDFs & Images
+BTL/tailieu/
+docs/*.jpg
+docs/*.png
+

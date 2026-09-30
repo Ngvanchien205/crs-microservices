@@ -386,6 +386,308 @@ def run_tests():
           f"Status: {res_len_err.status_code}")
 
     # -------------------------------------------------------------
+    # 6. CART SERVICE (LAB 04: GIỎ HÀNG CÓ TÍNH TIỀN)
+    # -------------------------------------------------------------
+    print("\n--- 6. CART SERVICE (LAB 04) ---")
+    
+    # 6.1 Happy Path: Làm sạch và Thêm sản phẩm vào giỏ hàng
+    client.delete("/api/v1/cart/clear?user_id=1")
+    res = client.post("/api/v1/cart/add", json={"user_id": 1, "product_id": 1, "quantity": 2})
+    check("CART-01", "CART", "Happy Path: Them 2 cuon Giao trinh vao gio hang",
+          res.status_code == 200 and res.json()["cart"][0]["quantity"] == 2,
+          f"Status: {res.status_code}")
+          
+    # 6.2 Happy Path: Xem giỏ hàng & tính tổng tiền tự động
+    res = client.get("/api/v1/cart?user_id=1")
+    check("CART-02", "CART", "Happy Path: Xem gio hang co tinh tong tien tu dong (subtotal)",
+          res.status_code == 200 and res.json()["total_amount"] > 0,
+          f"Total Amount: {res.json().get('total_amount')}d")
+
+    # 6.3 Happy Path: Cập nhật số lượng trong giỏ hàng
+    res = client.put("/api/v1/cart/update", json={"user_id": 1, "product_id": 1, "quantity": 3})
+    check("CART-03", "CART", "Happy Path: Cap nhat tang so luong len 3 san pham",
+          res.status_code == 200 and res.json()["cart"][0]["quantity"] == 3,
+          f"New Quantity: {res.json()['cart'][0]['quantity']}")
+
+    # 6.4 Ngoại lệ 1: Thêm vào giỏ với số lượng âm hoặc 0 (400 Bad Request)
+    res = client.post("/api/v1/cart/add", json={"user_id": 1, "product_id": 1, "quantity": 0})
+    check("CART-EX-01", "CART", "Ngoai Le 1: Tu choi them so luong 0 vao gio (400)",
+          res.status_code == 400,
+          f"Status: {res.status_code}")
+
+    # 6.5 Ngoại lệ 2: Cập nhật số lượng âm (400 Bad Request)
+    res = client.put("/api/v1/cart/update", json={"user_id": 1, "product_id": 1, "quantity": -5})
+    check("CART-EX-02", "CART", "Ngoai Le 2: Tu choi cap nhat so luong am (400)",
+          res.status_code == 400,
+          f"Status: {res.status_code}")
+
+    # 6.6 Ngoại lệ 3: Thêm sản phẩm không tồn tại vào giỏ (404 Not Found)
+    res = client.post("/api/v1/cart/add", json={"user_id": 1, "product_id": 999999, "quantity": 1})
+    check("CART-EX-03", "CART", "Ngoai Le 3: Tu choi them san pham khong ton tai (404)",
+          res.status_code == 404,
+          f"Status: {res.status_code}")
+
+    # 6.7 Happy Path: Xóa món khỏi giỏ hàng
+    res = client.delete("/api/v1/cart/remove/1?user_id=1")
+    check("CART-04", "CART", "Happy Path: Xoa san pham khoi gio hang thanh cong",
+          res.status_code == 200,
+          f"Status: {res.status_code}")
+
+    # -------------------------------------------------------------
+    # 7. SHIPPING SERVICE (LAB 05: PHÍ VẬN CHUYỂN GHN & HUB)
+    # -------------------------------------------------------------
+    print("\n--- 7. SHIPPING SERVICE (LAB 05) ---")
+
+    # 7.1 Happy Path: Lấy tại Trạm Hub CS1 HUNRE -> 0đ
+    res = client.post("/api/v1/shipping/calculate-fee", json={"method": "HUB_PICKUP"})
+    check("SHIP-01", "SHIPPING", "Happy Path: Nhan tai Tram Hub CS1 mien phi van chuyen (0d)",
+          res.status_code == 200 and res.json()["fee"] == 0.0,
+          f"Fee: {res.json().get('fee')}d")
+
+    # 7.2 Happy Path: Giao Hàng Nhanh (GHN) nội thành Bắc Từ Liêm -> 22.000đ
+    res = client.post("/api/v1/shipping/calculate-fee", json={"method": "GHN_DELIVERY", "district": "Bắc Từ Liêm"})
+    check("SHIP-02", "SHIPPING", "Happy Path: Tinh phi ship GHN noi thanh Bac Tu Liem (22.000d)",
+          res.status_code == 200 and res.json()["fee"] == 22000.0,
+          f"Fee: {res.json().get('fee')}d")
+
+    # 7.3 Happy Path: Giao Hàng Nhanh (GHN) ngoại tỉnh -> 30.000đ
+    res = client.post("/api/v1/shipping/calculate-fee", json={"method": "GHN_DELIVERY", "district": "Thành phố Bắc Ninh", "province": "Bắc Ninh"})
+    check("SHIP-03", "SHIPPING", "Happy Path: Tinh phi ship GHN ngoai tinh (30.000d)",
+          res.status_code == 200 and res.json()["fee"] == 30000.0,
+          f"Fee: {res.json().get('fee')}d")
+
+    # 7.4 Ngoại lệ: Phương thức vận chuyển không hợp lệ (400 Bad Request)
+    res = client.post("/api/v1/shipping/calculate-fee", json={"method": "FLYING_CARPET"})
+    check("SHIP-EX-01", "SHIPPING", "Ngoai Le 1: Tu choi phuong thuc van chuyen sai (400)",
+          res.status_code == 400,
+          f"Status: {res.status_code}")
+
+    # -------------------------------------------------------------
+    # 8. VOUCHERS, CHECKOUT & MULTI-GATEWAYS (LAB 06 & LAB 09)
+    # -------------------------------------------------------------
+    print("\n--- 8. VOUCHERS, ORDERS & MULTI-GATEWAY PAYMENTS ---")
+
+    # 8.1 Happy Path: Áp dụng mã Voucher HUNRE2026 giảm 10% (10.000đ) và TANSINHVIEN giảm 20.000đ
+    res = client.post("/api/v1/vouchers/apply", json={"code": "HUNRE2026", "order_value": 100000})
+    check("VOUCHER-01", "VOUCHER", "Happy Path: Ap dung ma giam gia HUNRE2026 giam 10% (10.000d)",
+          res.status_code == 200 and res.json()["discount_amount"] == 10000.0,
+          f"Discount: {res.json().get('discount_amount')}d")
+
+    res_tsv = client.post("/api/v1/vouchers/apply", json={"code": "TANSINHVIEN", "order_value": 100000})
+    check("VOUCHER-01B", "VOUCHER", "Happy Path: Ap dung ma TANSINHVIEN giam 20.000d",
+          res_tsv.status_code == 200 and res_tsv.json()["discount_amount"] == 20000.0,
+          f"Discount: {res_tsv.json().get('discount_amount')}d")
+
+    # 8.2 Ngoại lệ 1: Áp dụng voucher không đủ giá trị tối thiểu (400 Bad Request)
+    res = client.post("/api/v1/vouchers/apply", json={"code": "HUNRE2026", "order_value": 30000})
+    check("VOUCHER-EX-01", "VOUCHER", "Ngoai Le 1: Tu choi ap voucher khi don chua dat gia tri toi thieu",
+          res.status_code == 400,
+          f"Status: {res.status_code}")
+
+    # 8.3 Ngoại lệ 2: Mã voucher không tồn tại (404 Not Found)
+    res = client.post("/api/v1/vouchers/apply", json={"code": "MA_GIA_MAO", "order_value": 100000})
+    check("VOUCHER-EX-02", "VOUCHER", "Ngoai Le 2: Tu choi ma voucher khong ton tai (404)",
+          res.status_code == 404,
+          f"Status: {res.status_code}")
+
+    # 8.4 Happy Path: Đặt hàng qua Cổng Ký Quỹ ESCROW (Lab 06)
+    res = client.post("/api/v1/orders/checkout", json={
+        "user_id": 1,
+        "customer_name": "Nguyen Van An",
+        "customer_phone": "0981112233",
+        "shipping_address": "KTX HUNRE Nha B3",
+        "shipping_method": "HUB_PICKUP",
+        "gateway": "ESCROW",
+        "voucher_code": "HUNRE2026",
+        "items": [{"product_id": 2, "title": "May tinh Casio fx-580VNX", "price": 420000, "quantity": 1}]
+    })
+    order_escrow = res.json().get("order", {})
+    check("ORDER-01", "ORDER", "Happy Path: Dat hang cong ESCROW -> Khoa coc an toan & ghi log giao dich",
+          res.status_code == 200 and order_escrow.get("payment_status") == "paid",
+          f"Order Code: {order_escrow.get('order_code')}")
+
+    # 8.5 Happy Path: Đặt hàng qua Ví Điện Tử MoMo Sandbox (Lab 06)
+    res = client.post("/api/v1/orders/checkout", json={
+        "user_id": 1,
+        "customer_name": "Tran Thi Bich",
+        "customer_phone": "0982223344",
+        "shipping_address": "41A Phu Dien",
+        "shipping_method": "GHN_DELIVERY",
+        "gateway": "MOMO",
+        "items": [{"product_id": 3, "title": "Balo sinh vien", "price": 120000, "quantity": 1}]
+    })
+    order_momo = res.json().get("order", {})
+    momo_url = res.json().get("momo_pay_url")
+    check("ORDER-02", "ORDER", "Happy Path: Dat hang cong MoMo -> Sinh link QR thanh toan Sandbox",
+          res.status_code == 200 and momo_url is not None and "momo.vn" in momo_url,
+          f"Order Code: {order_momo.get('order_code')}")
+
+    # 8.6 Happy Path: Đặt hàng qua Tiền mặt COD (Lab 06 & Lab 09)
+    res = client.post("/api/v1/orders/checkout", json={
+        "user_id": 2,
+        "customer_name": "Le Hoang Cuong",
+        "customer_phone": "0983334455",
+        "shipping_address": "KTX Khu B HUNRE",
+        "shipping_method": "GHN_DELIVERY",
+        "gateway": "COD",
+        "items": [{"product_id": 1, "title": "Giao trinh", "price": 45000, "quantity": 1}]
+    })
+    order_cod = res.json().get("order", {})
+    order_cod_code = order_cod.get("order_code")
+    check("ORDER-03", "ORDER", "Happy Path: Dat hang COD -> Trang thai pending cho doi soat thu tien",
+          res.status_code == 200 and order_cod.get("payment_status") == "pending",
+          f"Order Code: {order_cod_code}")
+
+    # 8.7 Ngoại lệ 1: Đặt hàng thiếu Tên hoặc SĐT người nhận (422 Unprocessable Entity)
+    res = client.post("/api/v1/orders/checkout", json={
+        "user_id": 1,
+        "customer_name": "",
+        "customer_phone": "",
+        "shipping_address": "KTX",
+        "items": [{"product_id": 1, "price": 45000, "quantity": 1}]
+    })
+    check("ORDER-EX-01", "ORDER", "Ngoai Le 1: Tu choi dat hang thieu thong tin nguoi nhan (422)",
+          res.status_code == 422,
+          f"Status: {res.status_code}")
+
+    # 8.8 Ngoại lệ 2: Cổng thanh toán không hợp lệ (400 Bad Request)
+    res = client.post("/api/v1/orders/checkout", json={
+        "user_id": 1,
+        "customer_name": "Nguyen Van An",
+        "customer_phone": "0981234567",
+        "shipping_address": "KTX",
+        "gateway": "BITCOIN",
+        "items": [{"product_id": 1, "price": 45000, "quantity": 1}]
+    })
+    check("ORDER-EX-02", "ORDER", "Ngoai Le 2: Tu choi cong thanh toan khong ho tro (400)",
+          res.status_code == 400,
+          f"Status: {res.status_code}")
+
+    # -------------------------------------------------------------
+    # 9. ADMIN ORDER MANAGEMENT & STRICT RULES (LAB 08)
+    # -------------------------------------------------------------
+    print("\n--- 9. ADMIN ORDER MANAGEMENT (LAB 08 - 8 TABS & SAFE RULES) ---")
+
+    # 9.1 Happy Path: Lọc 8 tab trạng thái (all, pending, ready, delivering,...)
+    res_all = client.get("/api/v1/admin/orders?tab=all")
+    res_pending = client.get("/api/v1/admin/orders?tab=pending")
+    check("ADMIN-ORD-01", "ADMIN", "Happy Path: Loc danh sach 8 tab don hang (all & pending)",
+          res_all.status_code == 200 and res_pending.status_code == 200,
+          f"All Count: {res_all.json().get('count')} - Pending Count: {res_pending.json().get('count')}")
+
+    # 9.2 Happy Path: Chuyển trạng thái đơn sang 'delivering'
+    res = client.put(f"/api/v1/admin/orders/{order_cod_code}/status", json={"status": "delivering", "note": "Shipper GHN dang lay hang"})
+    check("ADMIN-ORD-02", "ADMIN", f"Happy Path: Chuyen don {order_cod_code} sang delivering",
+          res.status_code == 200 and res.json()["order"]["status"] == "delivering",
+          f"Status: {res.status_code}")
+
+    # 9.3 QUY TẮC RÀNG BUỘC CỐT LÕI CỦA LAB 08 (CRITICAL EXCEPTION):
+    # Đơn hàng đang ở trạng thái 'delivering' -> TUYỆT ĐỐI KHÔNG ĐƯỢC PHÉP HỦY (HTTP 400)
+    res_cancel_err = client.put(f"/api/v1/admin/orders/{order_cod_code}/status", json={"status": "cancelled", "note": "Khach muon huy"})
+    check("ADMIN-ORD-EX-01", "ADMIN", "QUY TAC LAB 08: TU CHOI HUY DON DANG GIAO HANG (400 Bad Request)",
+          res_cancel_err.status_code == 400 and "KHÔNG ĐƯỢC PHÉP HỦY" in res_cancel_err.json().get("detail", ""),
+          f"Status: {res_cancel_err.status_code} - Detail: {res_cancel_err.json().get('detail')}")
+
+    # -------------------------------------------------------------
+    # 10. FINANCE KPIS & COD RECONCILIATION MATRIX (LAB 09)
+    # -------------------------------------------------------------
+    print("\n--- 10. FINANCE RECONCILIATION & COD MATRIX (LAB 09) ---")
+
+    # 10.1 Happy Path: Lấy chỉ số KPIs tài chính
+    res_kpis = client.get("/api/v1/admin/finance/kpis")
+    kpis = res_kpis.json().get("kpis", {})
+    check("FIN-01", "FINANCE", "Happy Path: Tinh toan 6 chi so KPI tai chinh & doi soat",
+          res_kpis.status_code == 200 and "gross_revenue" in kpis and "pending_cod_amount" in kpis,
+          f"Gross Revenue: {kpis.get('gross_revenue'):,}d - Escrow: {kpis.get('escrow_holding_amount'):,}d")
+
+    # 10.2 Happy Path: Lấy danh sách sổ cái giao dịch
+    res_txs = client.get("/api/v1/admin/finance/transactions")
+    tx_list = res_txs.json().get("transactions", [])
+    cod_tx = next((t for t in tx_list if t.get("gateway") == "cod"), None)
+    check("FIN-02", "FINANCE", "Happy Path: Truy van so cai giao dich doi soat da cong",
+          res_txs.status_code == 200 and len(tx_list) > 0,
+          f"Transactions Count: {len(tx_list)}")
+
+    # 10.3 Happy Path: Chuyển trạng thái COD hợp lệ (pending -> paid)
+    if cod_tx:
+        res_cod_paid = client.put("/api/v1/admin/finance/cod-transition", json={"transaction_id": cod_tx["id"], "new_status": "paid"})
+        check("FIN-03", "FINANCE", "Happy Path: Doi soat COD thu tien thanh cong (pending -> paid)",
+              res_cod_paid.status_code == 200 and res_cod_paid.json()["transaction"]["status"] == "paid",
+              f"New Status: {res_cod_paid.json()['transaction']['status']}")
+
+        # 10.4 Ngoại lệ: Chuyển trạng thái COD phi lý trái ma trận (paid -> refunded trực tiếp không qua refund_pending)
+        res_cod_invalid = client.put("/api/v1/admin/finance/cod-transition", json={"transaction_id": cod_tx["id"], "new_status": "refunded"})
+        check("FIN-EX-01", "FINANCE", "Ngoai Le 1: Tu choi chuyen trang thai COD trai ma tran Lab 09 (400)",
+              res_cod_invalid.status_code == 400,
+              f"Status: {res_cod_invalid.status_code} - Detail: {res_cod_invalid.json().get('detail')}")
+
+    # -------------------------------------------------------------
+    # 11. WISHLIST & PRODUCT REVIEWS (YÊU CẦU BÀI TẬP LỚN)
+    # -------------------------------------------------------------
+    print("\n--- 11. WISHLIST & REVIEWS (YEU CAU BTL) ---")
+
+    # 11.1 Happy Path: Thêm sản phẩm 3 vào yêu thích (Wishlist toggle ADD)
+    res_fav = client.post("/api/v1/wishlist/toggle", json={"user_id": 1, "product_id": 3})
+    check("WISH-01", "WISHLIST", "Happy Path: Toggle yeu thich san pham 3 (Them vao)",
+          res_fav.status_code == 200 and res_fav.json().get("is_liked") is True,
+          f"Liked: {res_fav.json().get('is_liked')}")
+
+    # 11.2 Happy Path: Lấy danh sách yêu thích của sinh viên
+    res_fav_list = client.get("/api/v1/wishlist/1")
+    check("WISH-02", "WISHLIST", "Happy Path: Lay danh sach san pham yeu thich cua user (Co chua sp 2 va 3)",
+          res_fav_list.status_code == 200 and res_fav_list.json().get("count") >= 2,
+          f"Fav Count: {res_fav_list.json().get('count')}")
+
+    # 11.3 Happy Path: Bỏ thích sản phẩm 3 (Wishlist toggle REMOVE)
+    res_unfav = client.post("/api/v1/wishlist/toggle", json={"user_id": 1, "product_id": 3})
+    check("WISH-03", "WISHLIST", "Happy Path: Toggle bo yeu thich san pham 3 (Go ra)",
+          res_unfav.status_code == 200 and res_unfav.json().get("is_liked") is False,
+          f"Liked: {res_unfav.json().get('is_liked')}")
+
+    # 11.3 Happy Path: Đăng đánh giá & nhận xét sản phẩm
+    res_rev = client.post("/api/v1/reviews", json={"product_id": 1, "user_id": 1, "rating": 5, "comment": "Giao trinh rat dep va day du chuong"})
+    check("REV-01", "REVIEW", "Happy Path: Dang danh gia 5 sao cho san pham",
+          res_rev.status_code == 200 and res_rev.json()["review"]["rating"] == 5,
+          f"Status: {res_rev.status_code}")
+
+    # 11.4 Ngoại lệ 1: Đánh giá sao vượt quá ngưỡng [1-5] (400 Bad Request)
+    res_rev_err = client.post("/api/v1/reviews", json={"product_id": 1, "user_id": 1, "rating": 10, "comment": "Diem 10 khong hop le"})
+    check("REV-EX-01", "REVIEW", "Ngoai Le 1: Tu choi danh gia vuot qua 5 sao (400)",
+          res_rev_err.status_code == 400,
+          f"Status: {res_rev_err.status_code}")
+
+    # 11.5 Ngoại lệ 2: Đánh giá với nội dung bình luận rỗng (400 Bad Request)
+    res_rev_blank = client.post("/api/v1/reviews", json={"product_id": 1, "user_id": 1, "rating": 4, "comment": "   "})
+    check("REV-EX-02", "REVIEW", "Ngoai Le 2: Tu choi binh luan rong (400)",
+          res_rev_blank.status_code == 400,
+          f"Status: {res_rev_blank.status_code}")
+
+    # -------------------------------------------------------------
+    # 12. ADMIN USER MANAGEMENT & SECURITY (LAB 03)
+    # -------------------------------------------------------------
+    print("\n--- 12. ADMIN USER MANAGEMENT (LAB 03) ---")
+
+    # 12.1 Happy Path: Admin truy vấn danh sách toàn bộ người dùng
+    res_users = client.get("/api/v1/admin/users")
+    check("ADMIN-USR-01", "ADMIN", "Happy Path: Admin lay danh sach toan bo nguoi dung",
+          res_users.status_code == 200 and len(res_users.json()["users"]) >= 4,
+          f"Total Users: {len(res_users.json().get('users', []))}")
+
+    # 12.2 Happy Path: Khóa / Mở khóa tài khoản sinh viên vi phạm
+    res_block = client.put("/api/v1/admin/users/3/status", json={"status": "BLOCKED"})
+    check("ADMIN-USR-02", "ADMIN", "Happy Path: Admin khoa tai khoan sinh vi pham (BLOCKED)",
+          res_block.status_code == 200 and res_block.json()["user"]["status"] == "BLOCKED",
+          f"User 3 Status: {res_block.json()['user']['status']}")
+
+    # 12.3 Ngoại lệ: Cố tình khóa tài khoản Quản Trị Viên Admin (400 Bad Request)
+    admin_user = next((u for u in res_users.json()["users"] if u.get("role") == "ADMIN"), None)
+    if admin_user:
+        res_admin_block = client.put(f"/api/v1/admin/users/{admin_user['id']}/status", json={"status": "BLOCKED"})
+        check("ADMIN-USR-EX-01", "ADMIN", "Ngoai Le 1: Tu choi khoa tai khoan Quan Tri Vien ADMIN (400)",
+              res_admin_block.status_code == 400,
+              f"Status: {res_admin_block.status_code} - Detail: {res_admin_block.json().get('detail')}")
+
+    # -------------------------------------------------------------
     # TONG KET KET QUA
     # -------------------------------------------------------------
     print("\n" + "=" * 70)
@@ -397,4 +699,5 @@ def run_tests():
 
 if __name__ == "__main__":
     run_tests()
+
 

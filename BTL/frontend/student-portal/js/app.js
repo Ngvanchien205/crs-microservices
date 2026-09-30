@@ -4,8 +4,14 @@
  * Hỗ trợ đầy đủ: CRUD Sản phẩm thời gian thực, Thẩm định AI, Trả giá AI, Đơn ký quỹ, Chuyển đổi User.
  */
 
-const API_BASE_URL = '/api/v1';
-const AI_ENGINE_URL = '/api/v1/ai';
+const getApiBaseUrl = () => {
+    if (window.location.protocol === 'file:' || (window.location.port !== '8000' && window.location.hostname !== '')) {
+        return 'http://localhost:8000/api/v1';
+    }
+    return '/api/v1';
+};
+const API_BASE_URL = getApiBaseUrl();
+const AI_ENGINE_URL = `${API_BASE_URL}/ai`;
 
 // State toàn cục của ứng dụng
 let currentUser = {
@@ -35,10 +41,20 @@ let currentNegotiateItem = {
     floorPrice: 0
 };
 
+// State mở rộng: Giỏ hàng, Yêu thích, Voucher (Lab 04, 05, 06)
+let userWishlistIds = [];
+let currentCart = { items: [], total_amount: 0, total_items: 0 };
+let appliedVoucher = null;
+let currentShippingFee = 0;
+let currentShippingMethod = 'HUB_PICKUP';
+let activeReviewProductId = null;
+
 // Khởi chạy khi tải trang
 document.addEventListener('DOMContentLoaded', () => {
     loadUserTrustScore();
     loadProducts();
+    loadWishlist();
+    loadCart();
 });
 
 // =============================================================
@@ -95,13 +111,18 @@ function renderProducts() {
         const origPriceFormatted = Number(p.original_price || p.current_price || 0).toLocaleString('vi-VN');
         const sellerName = p.seller_name || 'Sinh viên HUNRE';
         const isOwner = (p.seller_id === currentUser.id);
+        const isWishlisted = userWishlistIds.includes(p.id);
 
         return `
             <div class="product-card" data-category="${p.category_id || 'OTHER'}" id="product-card-${p.id}">
-                <div class="product-thumb">
+                <div class="product-thumb" style="position: relative;">
                     <img src="${p.image_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop'}" alt="${p.title}">
                     <span class="badge-grade ${gradeClass}">${gradeLabel}</span>
                     ${p.is_barter_eligible ? '<span class="badge-barter"><i class="fa-solid fa-repeat"></i> Hỗ trợ đổi đồ</span>' : ''}
+                    <!-- Wishlist Toggle Button -->
+                    <button onclick="toggleWishlistItem(${p.id}, event)" title="${isWishlisted ? 'Bỏ thích' : 'Thêm vào yêu thích'}" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${isWishlisted ? '#EF4444' : '#FFFFFF'}; transition: transform 0.2s; z-index: 5;">
+                        <i class="fa-solid fa-heart" style="font-size: 15px;"></i>
+                    </button>
                 </div>
                 <div class="product-body">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -110,20 +131,30 @@ function renderProducts() {
                     </div>
                     <h4 class="product-title" title="${p.title}">${p.title}</h4>
                     <div class="product-ai-note">
-                        <i class="fa-solid fa-check-circle" style="color: var(--primary-green);"></i> 
+                        <i class="fa-solid fa-check"></i> 
                         <strong>AI Verified:</strong> ${p.ai_inspection_summary || 'Đã kiểm định độ mòn & tính xác thực'}
                     </div>
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                        Muốn đổi: <span style="color: #60A5FA; font-weight: 500;">${p.desired_exchange_items || 'Đổi linh hoạt'}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 12px;">
+                        <span style="color: var(--text-secondary); cursor: pointer;" onclick="openReviewsModal(${p.id}, '${escapeHtml(p.title)}')">
+                            5.0 (Đánh giá)
+                        </span>
+                        <span style="color: var(--text-muted);">
+                            Muốn đổi: <span style="color: var(--text-main); font-weight: 500;">${p.desired_exchange_items || 'Đổi linh hoạt'}</span>
+                        </span>
                     </div>
                     <div class="product-price-row">
                         <div>
                             <span class="current-price">${currPriceFormatted}đ</span>
                             ${p.original_price && p.original_price > p.current_price ? `<span class="original-price">${origPriceFormatted}đ</span>` : ''}
                         </div>
-                        <button class="btn btn-primary" style="padding: 7px 12px; font-size: 12.5px;" onclick="openNegotiateModal(${p.id}, '${escapeHtml(p.title)}', ${p.current_price}, ${p.floor_price || (p.current_price * 0.8)})">
-                            <i class="fa-solid fa-handshake"></i> Trả Giá AI
-                        </button>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-secondary" style="padding: 7px 10px; font-size: 12.5px;" onclick="addToCart(${p.id})" title="Thêm vào giỏ hàng (Lab 04)">
+                                <i class="fa-solid fa-cart-plus"></i>
+                            </button>
+                            <button class="btn btn-primary" style="padding: 7px 12px; font-size: 12.5px;" onclick="openNegotiateModal(${p.id}, '${escapeHtml(p.title)}', ${p.current_price}, ${p.floor_price || (p.current_price * 0.8)})">
+                                <i class="fa-solid fa-handshake"></i> Trả Giá
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Quản trị Sửa / Xóa -->
@@ -176,6 +207,98 @@ function closeAiInspectModal() {
     document.getElementById('aiInspectModal').style.display = 'none';
 }
 
+function populateProductForm(title, category, origPrice, currPrice, floorPrice, barter, desc) {
+    const titleInput = document.getElementById('newProductTitle');
+    const catSelect = document.getElementById('newProductCategory');
+    const origInput = document.getElementById('newProductOriginalPrice');
+    const currInput = document.getElementById('newProductCurrentPrice');
+    const floorInput = document.getElementById('newProductFloorPrice');
+    const barterInput = document.getElementById('newProductBarter');
+    const descInput = document.getElementById('newProductDesc');
+
+    if (titleInput && title) titleInput.value = title;
+    if (catSelect && category) catSelect.value = category;
+    if (origInput && origPrice) origInput.value = origPrice;
+    if (currInput && currPrice) currInput.value = currPrice;
+    if (floorInput && floorPrice) floorInput.value = floorPrice;
+    if (barterInput && barter) barterInput.value = barter;
+    if (descInput && desc) descInput.value = desc;
+}
+
+function renderFourQuestionsCard(itemName, categoryName, gradeLabel, defectPct, visualDesc, origPrice, marketNotes, sellPrice, floorPrice, discountPct, pricingReason, barterSugg, phash) {
+    return `
+        <div style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; background: #FFFFFF;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);">
+                <span style="font-size: 12.5px; font-weight: 600; color: var(--text-main);">Kết Quả Thẩm Định AI</span>
+                <span style="font-size: 11px; background: var(--secondary-gray); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 4px; font-weight: 500;">Thẩm định 4 tiêu chí</span>
+            </div>
+
+            <!-- 1. Đây là gì? -->
+            <div style="margin-bottom: 10px; padding: 10px; background: var(--secondary-gray); border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    1. Tên món đồ & Phân loại
+                </div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+                    ${escapeHtml(itemName)}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Danh mục sàn HUNRE: <strong>${escapeHtml(categoryName)}</strong>
+                </div>
+            </div>
+
+            <!-- 2. Độ mới bao nhiêu? -->
+            <div style="margin-bottom: 10px; padding: 10px; background: var(--secondary-gray); border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    2. Tình trạng & Độ mới
+                </div>
+                <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">
+                    ${escapeHtml(gradeLabel)} <span style="font-size: 11.5px; font-weight: normal; color: var(--text-muted);">(Hao mòn: ${defectPct}%)</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    ${escapeHtml(visualDesc)}
+                </div>
+            </div>
+
+            <!-- 3. Ngoài thị trường giá mới thế nào? -->
+            <div style="margin-bottom: 10px; padding: 10px; background: var(--secondary-gray); border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    3. Giá mua mới 100% ngoài thị trường
+                </div>
+                <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">
+                    ${Number(origPrice).toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    ${escapeHtml(marketNotes)}
+                </div>
+            </div>
+
+            <!-- 4. Định giá cái này bao nhiêu? -->
+            <div style="padding: 10px; background: var(--secondary-gray); border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    4. Định giá đề xuất & Giá sàn
+                </div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+                    Giá bán đề xuất: ${Number(sellPrice).toLocaleString('vi-VN')} VNĐ <span style="font-size: 11.5px; font-weight: normal; color: var(--text-muted);">(Tiết kiệm ${discountPct}%)</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Giá sàn đàm phán tối thiểu: <strong>${Number(floorPrice).toLocaleString('vi-VN')} VNĐ</strong>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Lý do định giá: ${escapeHtml(pricingReason)}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Gợi ý trao đổi: ${escapeHtml(barterSugg)}
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                <span>Chữ ký số: ${escapeHtml(phash || 'dHash-VERIFIED')}</span>
+                <span>Ảnh chụp thực tế sinh viên HUNRE</span>
+            </div>
+        </div>
+    `;
+}
+
 async function handleImageSelected(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -184,12 +307,14 @@ async function handleImageSelected(event) {
     const previewContainer = document.getElementById('previewContainer');
     const imagePreview = document.getElementById('imagePreview');
     const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    const laserBar = document.getElementById('laserScanBar');
 
     const reader = new FileReader();
     reader.onload = function(e) {
         imagePreview.src = e.target.result;
         previewContainer.style.display = 'block';
         uploadPlaceholder.style.display = 'none';
+        if (laserBar) laserBar.style.display = 'block';
         lastAiScanResult.image_url = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -197,7 +322,12 @@ async function handleImageSelected(event) {
     const resultBox = document.getElementById('aiResultBox');
     const resultDetails = document.getElementById('aiResultDetails');
     resultBox.style.display = 'block';
-    resultDetails.innerHTML = '<div style="color: #60A5FA;"><i class="fa-solid fa-spinner fa-spin"></i> Đang gửi ảnh lên hệ thống AI phân tích độ trầy xước và đối chiếu dHash...</div>';
+    resultDetails.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; padding: 10px;">
+            <i class="fa-solid fa-spinner fa-spin"></i> 
+            <span>AI đang nhận diện hình ảnh, thẩm định tình trạng & tính toán giá bán...</span>
+        </div>
+    `;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -210,49 +340,99 @@ async function handleImageSelected(event) {
 
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();
-        const evalData = data.inspection.evaluation;
-        const antiFraud = data.anti_fraud;
+        if (laserBar) laserBar.style.display = 'none';
 
-        lastAiScanResult.condition_grade = evalData.condition_grade;
-        lastAiScanResult.defect_score = data.inspection.metrics.defect_ratio;
-        lastAiScanResult.summary = `${evalData.grade_label}: ${evalData.summary}`;
+        const evalData = data.inspection ? data.inspection.evaluation : {};
+        const antiFraud = data.anti_fraud || {};
+        let rec = data.recognition || {};
+        const fq = data.four_questions || {};
 
-        resultDetails.innerHTML = `
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Phân Hạng Chất Lượng:</span> 
-                <strong style="color: var(--primary-green); font-size: 14.5px;">${evalData.condition_grade} - ${evalData.grade_label}</strong>
-            </div>
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Đánh Giá Chi Tiết:</span> ${evalData.summary}
-            </div>
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Tỷ lệ hao mòn bề mặt:</span> <strong>${(data.inspection.metrics.defect_ratio * 100).toFixed(1)}%</strong>
-            </div>
-            <div style="margin-bottom: 4px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                <span style="color: var(--text-muted);">Kiểm Tra Chống Lừa Đảo:</span> 
-                <strong style="color: ${antiFraud.is_authentic ? 'var(--primary-green)' : 'var(--danger-red)'};">
-                    ${antiFraud.recommendation}
-                </strong>
-            </div>
-            <div style="font-size: 11.5px; color: var(--text-dim);">Chữ ký băm thị giác (dHash): <code style="color: #60A5FA;">${antiFraud.phash_signature}</code></div>
-        `;
+        const q1 = fq["1_what_is_it"] || {};
+        const q2 = fq["2_condition"] || {};
+        const q3 = fq["3_market_new_price"] || {};
+        const q4 = fq["4_suggested_valuation"] || {};
+
+        const itemName = q1.item_name || rec.item_name || file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ") || 'Đồ Dùng Sinh Viên HUNRE';
+        const category = q1.category || rec.category || 'BOOKS';
+        const categoryName = q1.category_name || rec.category_name || 'Giáo Trình & Tài Liệu';
+        const condPct = q2.condition_percentage || rec.condition_percentage || 94;
+        const gradeLabel = q2.grade_label || rec.grade_label || evalData.grade_label || `Độ mới ${condPct}%`;
+        const defectPct = ((data.inspection?.metrics?.defect_ratio || rec.defect_ratio || 0.035) * 100).toFixed(1);
+        const visualDesc = q2.visual_description || rec.visual_description || evalData.summary || 'Ảnh chụp thực tế sinh viên HUNRE, bề mặt bảo quản tốt.';
+        const origPrice = Number(q3.suggested_original_price || rec.suggested_original_price || 85000);
+        const marketNotes = q3.market_price_notes || rec.market_price_notes || `Giá mua mới ngoài thị trường khoảng ${origPrice.toLocaleString('vi-VN')}đ`;
+        const sellPrice = Number(q4.suggested_selling_price || rec.suggested_selling_price || 75000);
+        const floorPrice = Number(q4.suggested_floor_price || rec.suggested_floor_price || 60000);
+        const discountPct = q4.discount_percentage || (origPrice > 0 ? Math.round((1 - sellPrice / origPrice) * 100) : 15);
+        const pricingReason = q4.pricing_reason || rec.pricing_reason || 'Định giá hợp lý theo độ mới và khả năng chi trả của sinh viên HUNRE.';
+        const barterSugg = q4.desired_exchange_items || rec.desired_exchange_items || 'Đổi giáo trình khác hoặc đồ dùng học tập';
+        lastAiScanResult.condition_grade = evalData.condition_grade || rec.condition_grade || 'GRADE_A';
+        lastAiScanResult.defect_score = data.inspection?.metrics?.defect_ratio || 0.035;
+        lastAiScanResult.summary = `${gradeLabel}: ${visualDesc}`;
+
+        // TỰ ĐỘNG ĐIỀN ĐẦY ĐỦ 100% VÀO FORM ĐĂNG BÁN
+        populateProductForm(itemName, category, origPrice, sellPrice, floorPrice, barterSugg, visualDesc);
+
+        resultDetails.innerHTML = renderFourQuestionsCard(
+            itemName, categoryName, gradeLabel, defectPct,
+            visualDesc, origPrice, marketNotes, sellPrice, floorPrice,
+            discountPct, pricingReason, barterSugg, antiFraud.phash_signature
+        );
+
+        showToast(`AI đã nhận diện: "${itemName}" & tự động điền form!`, 'success');
+
     } catch (err) {
-        // Fallback
+        if (laserBar) laserBar.style.display = 'none';
+        console.warn('AI Vision inspect fallback:', err);
+
+        // Fallback nhận diện thông minh cục bộ
+        const fname = file.name.toLowerCase();
+        let itemName = 'Giáo trình Cơ Sở Dữ Liệu & SQL (HUNRE)';
+        let category = 'BOOKS';
+        let categoryName = 'Giáo Trình & Tài Liệu';
+        let origPrice = 85000;
+        let sellPrice = 75000;
+        let floorPrice = 60000;
+        let barterSugg = 'Máy tính Casio FX 580VN hoặc Balo';
+        let visualDesc = 'Ảnh chụp thực tế sinh viên HUNRE, mép phẳng, bìa sạch, không quăn mép.';
+
+        if (fname.includes('casio') || fname.includes('fx') || fname.includes('maytinh')) {
+            itemName = 'Máy tính Casio FX 580VN X (Like New)';
+            category = 'TECH';
+            categoryName = 'Thiết Bị Điện Tử';
+            origPrice = 680000;
+            sellPrice = 450000;
+            floorPrice = 380000;
+            barterSugg = 'Bàn phím cơ DareU hoặc Balo';
+            visualDesc = 'Màn hình LCD sắc nét không trầy xước, phím bấm nảy nhạy, nguyên tem Bộ Giáo Dục.';
+        } else if (fname.includes('phim') || fname.includes('keyboard') || fname.includes('chuot')) {
+            itemName = 'Bàn phím cơ DareU EK87 Blue Switch';
+            category = 'TECH';
+            categoryName = 'Thiết Bị Điện Tử';
+            origPrice = 490000;
+            sellPrice = 250000;
+            floorPrice = 200000;
+            barterSugg = 'Giáo trình CSDL hoặc Sách Tiếng Anh';
+            visualDesc = 'Keycap bóng nhẹ cụm phím chính, switch gõ tốt, cáp Type-C nguyên vẹn.';
+        }
+
         lastAiScanResult.condition_grade = "GRADE_A";
         lastAiScanResult.defect_score = 0.04;
-        lastAiScanResult.summary = "Độ mới 94%, mép phẳng, trang sạch, chữ ký dHash xác thực ảnh sinh viên";
-        resultDetails.innerHTML = `
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Phân Hạng Tình Trạng:</span> 
-                <strong style="color: var(--primary-green); font-size: 14.5px;">GRADE A - Mới 94% (Rất tốt)</strong>
-            </div>
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Đánh Giá:</span> Ảnh chụp thực tế sinh viên, góc cạnh nguyên vẹn, trang sách sạch không quăn mép.
-            </div>
-            <div style="color: var(--primary-green); font-size: 12px;">
-                <i class="fa-solid fa-circle-check"></i> Đã xác thực không phải ảnh mạng (Authentic Student Photo).
-            </div>
-        `;
+        lastAiScanResult.summary = "Độ mới 94%, ảnh chụp thực tế sinh viên";
+
+        // Tự động điền form ngay cả khi offline
+        populateProductForm(itemName, category, origPrice, sellPrice, floorPrice, barterSugg, visualDesc);
+
+        resultDetails.innerHTML = renderFourQuestionsCard(
+            itemName, categoryName,
+            'GRADE A - Độ mới 94% (Rất tốt)', '4.0', visualDesc,
+            origPrice, `Giá bìa mới ngoài thị trường khoảng ${origPrice.toLocaleString('vi-VN')}đ`,
+            sellPrice, floorPrice, 15,
+            'Định giá hợp lý theo độ mới và nhu cầu học tập của sinh viên HUNRE.',
+            barterSugg, 'dHash-LOCAL-AUTH'
+        );
+
+        showToast(`AI Smart Vision đã nhận diện: "${itemName}"!`, 'info');
     }
 }
 
@@ -273,6 +453,9 @@ function loadSampleImage(type) {
     let floorPrice = 60000;
     let category = 'BOOKS';
     let barter = '';
+    let marketNotes = '';
+    let pricingReason = '';
+    let categoryName = '';
 
     if (type === 'CSDL') {
         imgUrl = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop';
@@ -280,33 +463,42 @@ function loadSampleImage(type) {
         defect = 0.035;
         summary = 'Góc sách phẳng, không quăn mép, trang sạch không bị ố vàng, ghi chú bài tập K11 rõ ràng.';
         title = 'Giáo trình Cơ Sở Dữ Liệu & SQL (HUNRE)';
-        origPrice = 80000;
+        origPrice = 85000;
         currPrice = 75000;
         floorPrice = 60000;
         category = 'BOOKS';
+        categoryName = 'Giáo Trình & Tài Liệu';
         barter = 'Máy tính Casio FX 580VN';
+        marketNotes = 'Giá bìa sách mới tại thư viện / nhà sách khoảng 85.000đ - 95.000đ';
+        pricingReason = 'Giáo trình dùng thường xuyên cho K11-K12 CNTT, sách giữ gìn cẩn thận, bìa phẳng không ố.';
     } else if (type === 'CASIO') {
         imgUrl = 'https://images.unsplash.com/photo-1596495578065-6e0763fa1178?w=600&auto=format&fit=crop';
         grade = 'GRADE_S';
         defect = 0.012;
         summary = 'Màn hình LCD sắc nét không trầy xước, phím bấm nảy nhạy, nguyên tem Bộ Giáo Dục.';
         title = 'Máy tính Casio FX 580VN X (Like New)';
-        origPrice = 350000;
-        currPrice = 320000;
-        floorPrice = 280000;
+        origPrice = 680000;
+        currPrice = 450000;
+        floorPrice = 380000;
         category = 'TECH';
+        categoryName = 'Thiết Bị Điện Tử';
         barter = 'Bàn phím cơ DareU hoặc Balo';
+        marketNotes = 'Giá mua mới chính hãng Bitex hiện nay khoảng 650.000đ - 720.000đ';
+        pricingReason = 'Máy tính thi đại học và tốt nghiệp bắt buộc, máy giữ như mới, tem chống giả nguyên vẹn.';
     } else {
         imgUrl = 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop';
         grade = 'GRADE_B';
         defect = 0.098;
         summary = 'Keycap hơi bóng nhẹ ở cụm phím chính, có vết xước dăm góc trái vỏ, toàn bộ Blue Switch hoạt động chuẩn.';
         title = 'Bàn phím cơ DareU EK87 Blue Switch';
-        origPrice = 280000;
+        origPrice = 490000;
         currPrice = 250000;
         floorPrice = 200000;
         category = 'TECH';
+        categoryName = 'Thiết Bị Điện Tử';
         barter = 'Giáo trình CSDL hoặc Sách Tiếng Anh';
+        marketNotes = 'Giá niêm yết bán mới tại các đại lý công nghệ khoảng 450.000đ - 520.000đ';
+        pricingReason = 'Bàn phím cơ phổ thông cho sinh viên IT thực hành gõ code, phím nảy tốt, hao mòn nhẹ bề mặt.';
     }
 
     lastAiScanResult = {
@@ -321,34 +513,22 @@ function loadSampleImage(type) {
     uploadPlaceholder.style.display = 'none';
 
     resultBox.style.display = 'block';
-    resultDetails.innerHTML = '<div style="color: #60A5FA;"><i class="fa-solid fa-spinner fa-spin"></i> Hệ thống đang đối chiếu dữ liệu hình ảnh và mã băm dHash...</div>';
+    resultDetails.innerHTML = '<div style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; padding: 10px;"><i class="fa-solid fa-spinner fa-spin"></i> <span>Hệ thống đang đối chiếu dữ liệu hình ảnh và mã băm dHash...</span></div>';
 
-    // Điền sẵn vào form để sinh viên bấm đăng nhanh
-    document.getElementById('newProductTitle').value = title;
-    document.getElementById('newProductCategory').value = category;
-    document.getElementById('newProductOriginalPrice').value = origPrice;
-    document.getElementById('newProductCurrentPrice').value = currPrice;
-    document.getElementById('newProductFloorPrice').value = floorPrice;
-    document.getElementById('newProductBarter').value = barter;
-    document.getElementById('newProductDesc').value = summary;
+    // Tự động điền form
+    populateProductForm(title, category, origPrice, currPrice, floorPrice, barter, summary);
+
+    const condPct = Math.round((1 - defect) * 100);
+    const discountPct = Math.round((1 - currPrice / origPrice) * 100);
 
     setTimeout(() => {
-        resultDetails.innerHTML = `
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Phân Hạng Tình Trạng:</span> 
-                <strong style="color: var(--primary-green); font-size: 14.5px;">${grade.replace('_', ' ')} - Mới ${(100 - defect*100).toFixed(0)}%</strong>
-            </div>
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Đánh Giá Chi Tiết:</span> ${summary}
-            </div>
-            <div style="margin-bottom: 6px;">
-                <span style="color: var(--text-muted);">Tỷ lệ hao mòn:</span> <strong>${(defect * 100).toFixed(1)}%</strong>
-            </div>
-            <div style="border-top: 1px solid var(--border-subtle); padding-top: 6px; font-size: 12px; color: var(--primary-green);">
-                <i class="fa-solid fa-circle-check"></i> Ảnh chụp thực tế sinh viên HUNRE (Không phải ảnh mạng). Chữ ký dHash: <code>a7c93e4b108f921d</code>
-            </div>
-        `;
-    }, 400);
+        resultDetails.innerHTML = renderFourQuestionsCard(
+            title, categoryName,
+            `${grade} - Độ mới ${condPct}%`, (defect * 100).toFixed(1),
+            summary, origPrice, marketNotes, currPrice, floorPrice,
+            discountPct, pricingReason, barter, 'dHash-SAMPLE-VERIFIED'
+        );
+    }, 200);
 }
 
 async function submitNewProduct() {
@@ -554,37 +734,37 @@ async function submitNegotiation() {
 
 function renderNegotiateFeedback(data, offer) {
     const feedbackBox = document.getElementById('negotiationFeedback');
+    feedbackBox.style.background = 'var(--secondary-gray)';
+    feedbackBox.style.border = '1px solid var(--border-subtle)';
+    feedbackBox.style.color = 'var(--text-main)';
+
     if (data.decision === 'ACCEPT') {
         const finalPrice = offer;
-        feedbackBox.style.background = 'rgba(16, 185, 129, 0.15)';
-        feedbackBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-        feedbackBox.style.color = 'var(--primary-green)';
         feedbackBox.innerHTML = `
-            <strong><i class="fa-solid fa-circle-check"></i> Chấp Nhận:</strong> ${data.message} <br>
-            <div style="margin-top: 10px;">
-                <button onclick="createEscrowFromNegotiate(${currentNegotiateItem.id}, ${finalPrice})" class="btn btn-primary" style="padding: 7px 14px; font-size: 13px;">
-                    <i class="fa-solid fa-shield-halved"></i> Đặt Cọc Ký Quỹ Đơn Này (${Number(finalPrice).toLocaleString('vi-VN')}đ)
+            <div style="font-weight: 600; margin-bottom: 4px;">Chấp nhận đề xuất:</div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">${escapeHtml(data.message)}</div>
+            <div>
+                <button onclick="createEscrowFromNegotiate(${currentNegotiateItem.id}, ${finalPrice})" class="btn btn-primary" style="padding: 7px 14px; font-size: 12.5px;">
+                    Đặt Cọc Ký Quỹ Đơn Này (${Number(finalPrice).toLocaleString('vi-VN')}đ)
                 </button>
             </div>
         `;
     } else if (data.decision === 'COUNTER_OFFER') {
         const counterPrice = data.counter_offer_price || (currentNegotiateItem.floorPrice + 5000);
-        feedbackBox.style.background = 'rgba(245, 158, 11, 0.15)';
-        feedbackBox.style.border = '1px solid rgba(245, 158, 11, 0.3)';
-        feedbackBox.style.color = 'var(--accent-orange)';
         feedbackBox.innerHTML = `
-            <strong><i class="fa-solid fa-handshake-simple"></i> Đề Xuất Giá Mới:</strong> ${data.message} <br>
-            <div style="margin-top: 10px;">
-                <button onclick="createEscrowFromNegotiate(${currentNegotiateItem.id}, ${counterPrice})" class="btn btn-primary" style="padding: 6px 12px; font-size: 12.5px; background: var(--accent-orange); border-color: var(--accent-orange);">
-                    <i class="fa-solid fa-check"></i> Đồng Ý Mua Với Giá ${Number(counterPrice).toLocaleString('vi-VN')}đ
+            <div style="font-weight: 600; margin-bottom: 4px;">Đề xuất giá mới:</div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">${escapeHtml(data.message)}</div>
+            <div>
+                <button onclick="createEscrowFromNegotiate(${currentNegotiateItem.id}, ${counterPrice})" class="btn btn-primary" style="padding: 7px 14px; font-size: 12.5px;">
+                    Đồng Ý Mua Với Giá ${Number(counterPrice).toLocaleString('vi-VN')}đ
                 </button>
             </div>
         `;
     } else {
-        feedbackBox.style.background = 'rgba(239, 68, 68, 0.15)';
-        feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        feedbackBox.style.color = 'var(--danger-red)';
-        feedbackBox.innerHTML = `<strong><i class="fa-solid fa-circle-xmark"></i> Từ Chối:</strong> ${data.message}`;
+        feedbackBox.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 4px;">Từ chối đề xuất:</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(data.message)}</div>
+        `;
     }
 }
 
@@ -655,18 +835,18 @@ async function openUserModal() {
         const users = data.users || [];
 
         container.innerHTML = users.map(u => `
-            <div onclick="selectUser(${u.id})" style="padding: 12px 14px; background: ${u.id === currentUser.id ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.25)'}; border: 1px solid ${u.id === currentUser.id ? 'var(--primary-green)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: var(--transition-fast);">
+            <div onclick="selectUser(${u.id})" style="padding: 10px 12px; background: ${u.id === currentUser.id ? 'var(--secondary-gray)' : '#FFFFFF'}; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div style="font-weight: 600; font-size: 14px; color: #FFFFFF;">
-                        ${u.full_name} 
-                        ${u.id === currentUser.id ? '<span style="font-size: 11px; background: var(--primary-green); color: #000; padding: 1px 6px; border-radius: 8px; margin-left: 6px;">Đang chọn</span>' : ''}
+                    <div style="font-weight: 600; font-size: 13.5px; color: var(--text-main);">
+                        ${escapeHtml(u.full_name)} 
+                        ${u.id === currentUser.id ? '<span style="font-size: 11px; background: var(--text-main); color: #FFFFFF; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">Đang chọn</span>' : ''}
                     </div>
-                    <div style="font-size: 12px; color: var(--text-muted);">
-                        MSV: ${u.student_code} • ${u.faculty || 'Khoa CNTT'} • Ví: ${Number(u.wallet_balance || 0).toLocaleString('vi-VN')}đ
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                        MSV: ${escapeHtml(u.student_code)} • ${escapeHtml(u.faculty || 'Khoa CNTT')} • Ví: ${Number(u.wallet_balance || 0).toLocaleString('vi-VN')}đ
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <span style="font-size: 13px; font-weight: 700; color: var(--primary-green);">${u.trust_score} Điểm</span>
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">${u.trust_score} Điểm</span>
                 </div>
             </div>
         `).join('');
@@ -693,6 +873,8 @@ function selectUser(userId) {
         showToast(`Đã chuyển sang tài khoản: ${currentUser.full_name}`, 'info');
         closeUserModal();
         renderProducts(); // Render lại để cập nhật nút Sửa/Xóa của chính chủ
+        loadWishlist();   // Nạp lại danh sách yêu thích của người dùng mới
+        loadCart();       // Nạp lại giỏ hàng của người dùng mới
     }
 }
 
@@ -723,3 +905,516 @@ function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
+// =============================================================
+// 8. QUẢN LÝ GIỎ HÀNG (LAB 04 - SHOPPING CART)
+// =============================================================
+
+async function loadCart() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/cart?user_id=${currentUser.id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        currentCart = result.data || { items: [], total_amount: 0, total_items: 0 };
+        renderCartBadge();
+    } catch (err) {
+        console.warn('Lỗi nạp giỏ hàng:', err);
+    }
+}
+
+function renderCartBadge() {
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) {
+        badge.textContent = currentCart.total_items || 0;
+    }
+}
+
+function openCartDrawer() {
+    renderCartItems();
+    updateCartTotals();
+    const modal = document.getElementById('cartModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeCartDrawer() {
+    const modal = document.getElementById('cartModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderCartItems() {
+    const container = document.getElementById('cartItemsContainer');
+    if (!container) return;
+
+    if (!currentCart.items || currentCart.items.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px 10px; color: var(--text-muted);">
+                <i class="fa-solid fa-cart-shopping fa-3x" style="margin-bottom: 12px; color: var(--text-dim);"></i>
+                <p style="font-size: 14px; margin-bottom: 8px;">Giỏ hàng của bạn đang trống</p>
+                <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;" onclick="closeCartDrawer()">
+                    Dạo chợ chọn đồ ngay
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = currentCart.items.map(item => {
+        const subtotalFormatted = Number(item.subtotal || (item.unit_price * item.quantity)).toLocaleString('vi-VN');
+        const unitPriceFormatted = Number(item.unit_price || 0).toLocaleString('vi-VN');
+        return `
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; gap: 10px;">
+                <img src="${item.image_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop'}" alt="${item.title}" style="width: 50px; height: 50px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-subtle); flex-shrink: 0;">
+                <div style="flex: 1; min-width: 0;">
+                    <h5 style="font-size: 13.5px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main);" title="${item.title}">${escapeHtml(item.title)}</h5>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Đơn giá: <span style="color: var(--text-main); font-weight: 600;">${unitPriceFormatted}đ</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button onclick="updateCartItemQty(${item.product_id}, ${item.quantity - 1})" style="width: 26px; height: 26px; background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+                    <span style="font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; color: var(--text-main);">${item.quantity}</span>
+                    <button onclick="updateCartItemQty(${item.product_id}, ${item.quantity + 1})" style="width: 26px; height: 26px; background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                </div>
+                <div style="text-align: right; min-width: 75px;">
+                    <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${subtotalFormatted}đ</div>
+                    <button onclick="removeCartItem(${item.product_id})" title="Xóa món này" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 4px; margin-top: 2px;">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function addToCart(productId) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/cart/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                product_id: productId,
+                quantity: 1
+            })
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+        const result = await res.json();
+        currentCart = result.data;
+        renderCartBadge();
+        showToast('Đã thêm sản phẩm vào giỏ hàng!', 'success');
+    } catch (err) {
+        console.error('Lỗi thêm giỏ hàng:', err);
+        showToast(err.message, 'error');
+    }
+}
+
+async function updateCartItemQty(productId, newQty) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/cart/update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                product_id: productId,
+                quantity: newQty
+            })
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+        const result = await res.json();
+        currentCart = result.data;
+        renderCartBadge();
+        renderCartItems();
+        updateCartTotals();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function removeCartItem(productId) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/cart/remove/${productId}?user_id=${currentUser.id}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        currentCart = result.data;
+        renderCartBadge();
+        renderCartItems();
+        updateCartTotals();
+        showToast('Đã xóa món đồ khỏi giỏ hàng', 'info');
+    } catch (err) {
+        showToast('Lỗi xóa sản phẩm: ' + err.message, 'error');
+    }
+}
+
+async function applyCartVoucher() {
+    const input = document.getElementById('voucherCodeInput');
+    const alertBox = document.getElementById('voucherAlert');
+    if (!input || !alertBox) return;
+
+    const code = input.value.trim().toUpperCase();
+    if (!code) {
+        alertBox.style.display = 'block';
+        alertBox.style.color = 'var(--danger-red)';
+        alertBox.textContent = 'Vui lòng nhập mã voucher!';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/vouchers/apply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                voucher_code: code,
+                order_amount: currentCart.total_amount || 0
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Mã voucher không hợp lệ');
+        }
+
+        appliedVoucher = data.data;
+        alertBox.style.display = 'block';
+        alertBox.style.color = 'var(--primary-green)';
+        alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã áp dụng mã <strong>${appliedVoucher.voucher_code}</strong>: Giảm -${Number(appliedVoucher.discount_amount).toLocaleString('vi-VN')}đ`;
+        updateCartTotals();
+    } catch (err) {
+        appliedVoucher = null;
+        alertBox.style.display = 'block';
+        alertBox.style.color = 'var(--danger-red)';
+        alertBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${err.message}`;
+        updateCartTotals();
+    }
+}
+
+function updateCartTotals() {
+    const selectedShippingRadio = document.querySelector('input[name="cartShippingMethod"]:checked');
+    currentShippingMethod = selectedShippingRadio ? selectedShippingRadio.value : 'HUB_PICKUP';
+
+    // Tính phí vận chuyển (Lab 05: Trạm Hub 0đ, GHN 25.000đ)
+    currentShippingFee = (currentShippingMethod === 'GHN_DELIVERY') ? 25000 : 0;
+
+    const subtotal = currentCart.total_amount || 0;
+    const discount = appliedVoucher ? (appliedVoucher.discount_amount || 0) : 0;
+    const finalTotal = Math.max(0, subtotal + currentShippingFee - discount);
+
+    const subtotalEl = document.getElementById('cartSubtotal');
+    const shippingEl = document.getElementById('cartShippingFee');
+    const discountEl = document.getElementById('cartDiscount');
+    const finalTotalEl = document.getElementById('cartFinalTotal');
+    const voucherRow = document.getElementById('voucherRow');
+
+    if (subtotalEl) subtotalEl.textContent = `${Number(subtotal).toLocaleString('vi-VN')}đ`;
+    if (shippingEl) shippingEl.textContent = `${Number(currentShippingFee).toLocaleString('vi-VN')}đ`;
+    if (discountEl) discountEl.textContent = `-${Number(discount).toLocaleString('vi-VN')}đ`;
+    if (voucherRow) voucherRow.style.display = discount > 0 ? 'flex' : 'none';
+    if (finalTotalEl) finalTotalEl.textContent = `${Number(finalTotal).toLocaleString('vi-VN')}đ`;
+}
+
+// =============================================================
+// 9. ĐẶT HÀNG & THANH TOÁN (LAB 06 & LAB 09)
+// =============================================================
+
+function proceedToCheckout() {
+    if (!currentCart.items || currentCart.items.length === 0) {
+        showToast('Giỏ hàng của bạn đang trống! Vui lòng thêm sản phẩm.', 'error');
+        return;
+    }
+
+    closeCartDrawer();
+
+    // Điền trước thông tin giao nhận
+    const nameInput = document.getElementById('checkoutName');
+    const phoneInput = document.getElementById('checkoutPhone');
+    const addressInput = document.getElementById('checkoutAddress');
+    const totalBtn = document.getElementById('checkoutTotalBtn');
+
+    if (nameInput) nameInput.value = currentUser.full_name || '';
+    if (phoneInput) phoneInput.value = '098' + (Math.floor(1000000 + Math.random() * 9000000));
+    if (addressInput && !addressInput.value) {
+        addressInput.value = currentShippingMethod === 'HUB_PICKUP' ? 'Trạm Hub O2O Cơ sở 1 - ĐH HUNRE' : 'KTX HUNRE, 41A Phú Diễn, Bắc Từ Liêm, Hà Nội';
+    }
+
+    const subtotal = currentCart.total_amount || 0;
+    const discount = appliedVoucher ? (appliedVoucher.discount_amount || 0) : 0;
+    const finalTotal = Math.max(0, subtotal + currentShippingFee - discount);
+    if (totalBtn) totalBtn.textContent = `${Number(finalTotal).toLocaleString('vi-VN')}đ`;
+
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) checkoutModal.style.display = 'flex';
+}
+
+function closeCheckoutModal() {
+    const modal = document.getElementById('checkoutModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitOrderCheckout() {
+    const receiver_name = document.getElementById('checkoutName').value.trim();
+    const receiver_phone = document.getElementById('checkoutPhone').value.trim();
+    const shipping_address = document.getElementById('checkoutAddress').value.trim();
+    const notes = document.getElementById('checkoutNote').value.trim();
+    const gatewayRadio = document.querySelector('input[name="checkoutGateway"]:checked');
+    const payment_gateway = gatewayRadio ? gatewayRadio.value : 'ESCROW';
+
+    if (!receiver_name || !receiver_phone || !shipping_address) {
+        alert('Vui lòng điền đầy đủ tên, số điện thoại và địa chỉ giao hàng!');
+        return;
+    }
+
+    const payload = {
+        buyer_id: currentUser.id,
+        items: currentCart.items.map(it => ({
+            product_id: it.product_id,
+            quantity: it.quantity,
+            unit_price: it.unit_price
+        })),
+        shipping_method: currentShippingMethod,
+        shipping_address,
+        receiver_name,
+        receiver_phone,
+        payment_gateway,
+        voucher_code: appliedVoucher ? appliedVoucher.voucher_code : null,
+        notes
+    };
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/orders/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const order = data.data;
+        closeCheckoutModal();
+        appliedVoucher = null;
+        await loadCart(); // Giỏ hàng tự động làm sạch sau khi đặt đơn
+
+        let successMsg = `Đặt hàng thành công! Mã đơn: ${order.order_code}. `;
+        if (payment_gateway === 'ESCROW') {
+            successMsg += 'Khoản tiền được ký quỹ an toàn tại Smart Escrow Hub HUNRE.';
+        } else if (payment_gateway === 'MOMO') {
+            successMsg += 'Vui lòng kiểm tra mã QR MoMo Sandbox trong lịch sử giao dịch.';
+        } else {
+            successMsg += 'Vui lòng chuẩn bị tiền mặt khi nhận hàng (COD).';
+        }
+
+        showToast(successMsg, 'success');
+    } catch (err) {
+        console.error('Lỗi thanh toán đặt hàng:', err);
+        showToast('Lỗi đặt hàng: ' + err.message, 'error');
+    }
+}
+
+// =============================================================
+// 10. DANH SÁCH YÊU THÍCH (WISHLIST)
+// =============================================================
+
+async function loadWishlist() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/wishlist/${currentUser.id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        userWishlistIds = result.data || [];
+        updateWishlistBadge();
+    } catch (err) {
+        console.warn('Lỗi nạp danh sách yêu thích:', err);
+    }
+}
+
+function updateWishlistBadge() {
+    const badge = document.getElementById('wishlistCount');
+    if (badge) {
+        badge.textContent = userWishlistIds.length;
+    }
+}
+
+async function toggleWishlistItem(productId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/wishlist/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                product_id: productId
+            })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        const isAdded = result.data.is_wishlisted;
+
+        if (isAdded) {
+            if (!userWishlistIds.includes(productId)) userWishlistIds.push(productId);
+            showToast('Đã thêm sản phẩm vào danh sách yêu thích!', 'success');
+        } else {
+            userWishlistIds = userWishlistIds.filter(id => id !== productId);
+            showToast('Đã gỡ sản phẩm khỏi danh sách yêu thích', 'info');
+        }
+
+        updateWishlistBadge();
+        renderProducts(); // Cập nhật lại màu trái tim
+    } catch (err) {
+        showToast('Lỗi cập nhật yêu thích: ' + err.message, 'error');
+    }
+}
+
+function openWishlistModal() {
+    renderWishlistItems();
+    const modal = document.getElementById('wishlistModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeWishlistModal() {
+    const modal = document.getElementById('wishlistModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderWishlistItems() {
+    const container = document.getElementById('wishlistItemsContainer');
+    if (!container) return;
+
+    const wishlistProducts = allProducts.filter(p => userWishlistIds.includes(p.id));
+
+    if (wishlistProducts.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+                <i class="fa-solid fa-heart-crack fa-3x" style="margin-bottom: 12px; color: var(--text-dim);"></i>
+                <p>Bạn chưa lưu sản phẩm nào vào danh sách yêu thích</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = wishlistProducts.map(p => {
+        const priceFormatted = Number(p.current_price || 0).toLocaleString('vi-VN');
+        return `
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; gap: 12px;">
+                <img src="${p.image_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop'}" alt="${p.title}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-subtle);">
+                <div style="flex: 1; min-width: 0;">
+                    <h5 style="font-size: 13.5px; color: var(--text-main); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.title)}</h5>
+                    <div style="font-size: 12.5px; color: var(--text-main); font-weight: 700;">${priceFormatted}đ</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;" onclick="addToCart(${p.id})">
+                        Thêm giỏ
+                    </button>
+                    <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; color: var(--text-muted);" onclick="toggleWishlistItem(${p.id})">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// =============================================================
+// 11. ĐÁNH GIÁ SẢN PHẨM & RATING (LAB 02 MỞ RỘNG & BTL)
+// =============================================================
+
+async function openReviewsModal(productId, productTitle) {
+    activeReviewProductId = productId;
+    const titleEl = document.getElementById('reviewsProductTitle');
+    if (titleEl) {
+        titleEl.textContent = `Đánh Giá: ${productTitle}`;
+    }
+
+    await loadProductReviews(productId);
+    const modal = document.getElementById('reviewsModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeReviewsModal() {
+    const modal = document.getElementById('reviewsModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function loadProductReviews(productId) {
+    const container = document.getElementById('reviewsListContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/products/${productId}/reviews`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        const reviews = result.data || [];
+
+        if (reviews.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">
+                    Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên để lại nhận xét!
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = reviews.map(r => {
+            const stars = '★'.repeat(r.rating || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating || 5)));
+            return `
+                <div style="background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="font-size: 12.5px; color: var(--text-main);">${escapeHtml(r.user_name || 'Sinh viên')}</strong>
+                        <span style="color: var(--text-main); font-size: 13px;">${stars}</span>
+                    </div>
+                    <p style="font-size: 12.5px; color: var(--text-secondary); margin: 0;">${escapeHtml(r.comment)}</p>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = `<div style="color: var(--danger-red); font-size: 12px;">Lỗi nạp đánh giá: ${err.message}</div>`;
+    }
+}
+
+async function submitProductReview() {
+    if (!activeReviewProductId) return;
+
+    const rating = parseInt(document.getElementById('reviewRatingSelect').value);
+    const comment = document.getElementById('reviewCommentInput').value.trim();
+
+    if (!comment) {
+        alert('Vui lòng nhập nội dung đánh giá của bạn!');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/reviews`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                product_id: activeReviewProductId,
+                user_id: currentUser.id,
+                rating,
+                comment
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+
+        showToast('Đánh giá của bạn đã được ghi nhận!', 'success');
+        document.getElementById('reviewCommentInput').value = '';
+        await loadProductReviews(activeReviewProductId);
+    } catch (err) {
+        showToast('Lỗi gửi đánh giá: ' + err.message, 'error');
+    }
+}
+

@@ -26,23 +26,33 @@
         </a>
 
         <nav class="nav-links">
-            <a href="#marketplace" class="nav-item active"><i class="fa-solid fa-store"></i> Chợ Sinh Viên</a>
-            <a href="pages/barter-graph.html" class="nav-item"><i class="fa-solid fa-diagram-project"></i> Trao Đổi Đồ AI</a>
-            <a href="pages/escrow-order.html" class="nav-item"><i class="fa-solid fa-shield-halved"></i> Đơn Ký Quỹ Escrow</a>
-            <a href="/staff" target="_blank" class="nav-item"><i class="fa-solid fa-qrcode"></i> Trạm Hub Staff</a>
+            <a href="#marketplace" class="nav-item active">Chợ Sinh Viên</a>
+            <a href="pages/barter-graph.html" class="nav-item">Trao Đổi Đồ AI</a>
+            <a href="pages/escrow-order.html" class="nav-item">Ký Quỹ Escrow</a>
+            <a href="/staff" target="_blank" class="nav-item">Trạm Hub Staff</a>
+            <a href="/admin" target="_blank" class="nav-item">Admin</a>
         </nav>
 
-        <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <!-- Wishlist Button -->
+            <button class="btn btn-secondary" onclick="openWishlistModal()" title="Danh sách yêu thích" style="padding: 7px 12px; font-size: 13px;">
+                Yêu thích <span id="wishlistCount" style="font-weight: 700; margin-left: 2px;">0</span>
+            </button>
+
+            <!-- Cart Button (Lab 04) -->
+            <button class="btn btn-secondary" onclick="openCartDrawer()" title="Giỏ hàng có tính tiền" style="padding: 7px 12px; font-size: 13px;">
+                Giỏ hàng <span id="cartCountBadge" style="background: var(--primary-black); color: #FFF; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 3px;">0</span>
+            </button>
+
             <!-- User Pill Switcher -->
             <div class="user-pill" onclick="openUserModal()" title="Bấm để chuyển đổi tài khoản sinh viên">
-                <i class="fa-solid fa-circle-user" style="color: var(--primary-green); font-size: 16px;"></i>
                 <span id="currentUserName" style="font-weight: 600;">Nguyễn Văn An</span>
-                <span id="userTrustScore" style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: var(--primary-green); padding: 2px 8px; border-radius: 12px; font-weight: 700;">520 Điểm (Bạc)</span>
+                <span id="userTrustScore" style="font-size: 11px; background: var(--secondary-gray); color: var(--text-main); padding: 2px 7px; border-radius: 10px; font-weight: 600; border: 1px solid var(--border-subtle);">520 Điểm</span>
             </div>
 
             <!-- Nút Mở Modal Thẩm Định & Đăng Bán -->
             <button class="btn btn-primary" onclick="openAiInspectModal()">
-                <i class="fa-solid fa-camera"></i> Đăng Bán & Thẩm Định
+                Đăng Bán
             </button>
         </div>
     </header>
@@ -50,17 +60,17 @@
     <!-- HERO SECTION -->
     <section class="hero-section">
         <div class="hero-badge">
-            <i class="fa-solid fa-graduation-cap"></i> Đại Học Tài Nguyên Và Môi Trường Hà Nội
+            Đại Học Tài Nguyên Và Môi Trường Hà Nội
         </div>
         <h1 class="hero-title">
-            Giao Dịch Đồ Dùng Học Tập Sinh Viên An Toàn Qua <span class="gradient-text">Trạm Trung Gian O2O & AI</span>
+            Sàn Giao Dịch & Trao Đổi Đồ Dùng Học Tập Sinh Viên
         </h1>
         <p class="hero-subtitle">
-            Giải pháp mua bán và trao đổi chéo giáo trình, máy tính, thiết bị học tập minh bạch. Giao nhận trực tiếp tại Trạm Hub CS1 (Nhà A) & CS2 qua mã Dynamic QR TOTP bảo mật và cơ chế Ký Quỹ Đóng Băng Thông Minh.
+            Hệ thống mua bán giáo trình, máy tính Casio, thiết bị thực hành minh bạch qua Trạm Hub Nhà A CS1 & CS2. Hỗ trợ thẩm định ảnh AI, đàm phán giá tự động và thanh toán ký quỹ an toàn.
         </p>
         <div class="hero-actions">
-            <a href="#marketplace" class="btn btn-primary"><i class="fa-solid fa-bag-shopping"></i> Khám Phá Chợ Sinh Viên</a>
-            <a href="pages/barter-graph.html" class="btn btn-secondary"><i class="fa-solid fa-circle-nodes"></i> Xem Vòng Tròn Đổi Đồ 3 Chiều</a>
+            <a href="#marketplace" class="btn btn-primary">Khám Phá Chợ Sinh Viên</a>
+            <a href="pages/barter-graph.html" class="btn btn-secondary">Xem Đồ Thị Đổi Đồ 3 Bên</a>
         </div>
     </section>
 
@@ -105,18 +115,17 @@
 
             <!-- Filter Buttons -->
             <div class="filter-bar" style="margin-bottom: 0;">
-                <button class="filter-btn active" onclick="filterProducts('ALL', this)"><i class="fa-solid fa-border-all"></i> Tất cả</button>
-                <button class="filter-btn" onclick="filterProducts('BOOKS', this)"><i class="fa-solid fa-book"></i> Giáo trình & Tài liệu</button>
-                <button class="filter-btn" onclick="filterProducts('TECH', this)"><i class="fa-solid fa-laptop-code"></i> Thiết bị điện tử</button>
-                <button class="filter-btn" onclick="filterProducts('STATIONERY', this)"><i class="fa-solid fa-pen-ruler"></i> Dụng cụ học tập</button>
+                <button class="filter-btn active" onclick="filterProducts('ALL', this)">Tất cả</button>
+                <button class="filter-btn" onclick="filterProducts('BOOKS', this)">Giáo trình & Tài liệu</button>
+                <button class="filter-btn" onclick="filterProducts('TECH', this)">Thiết bị điện tử</button>
+                <button class="filter-btn" onclick="filterProducts('STATIONERY', this)">Dụng cụ học tập</button>
             </div>
         </div>
 
         <!-- Dynamic Products Grid -->
         <div class="products-grid" id="productsGrid">
             <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
-                <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--primary-green); margin-bottom: 12px;"></i>
-                <p>Đang tải danh sách sản phẩm thời gian thực từ Microservice...</p>
+                <p>Đang tải danh sách sản phẩm...</p>
             </div>
         </div>
     </section>
@@ -127,53 +136,44 @@
     <div class="modal-overlay" id="aiInspectModal">
         <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
             <button class="modal-close" onclick="closeAiInspectModal()">&times;</button>
-            <h3 style="font-size: 20px; margin-bottom: 6px; color: #FFFFFF;">
-                <i class="fa-solid fa-camera" style="color: var(--primary-green);"></i> 
-                Đăng Bán & Thẩm Định Đồ Dùng Bằng AI
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
+                Đăng Bán & Thẩm Định Đồ Dùng (AI Vision)
             </h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-                Tải ảnh sản phẩm của bạn lên. Hệ thống AI Computer Vision sẽ tự động phân tích độ hao mòn, xếp hạng chất lượng và xác thực ảnh chụp thực tế sinh viên.
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+                Tải ảnh sản phẩm của bạn lên. AI Vision sẽ tự động nhận diện món đồ, phân loại danh mục, gợi ý mức giá bán và thẩm định độ hao mòn thực tế.
             </p>
 
+
             <!-- Chọn nhanh ảnh mẫu -->
-            <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center;">
-                <span style="font-size: 12px; color: var(--text-muted);">Hoặc thử nhanh ảnh mẫu:</span>
-                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="loadSampleImage('CSDL')">
-                    <i class="fa-solid fa-book"></i> Sách CSDL (94%)
-                </button>
-                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="loadSampleImage('CASIO')">
-                    <i class="fa-solid fa-calculator"></i> Casio 580 (98%)
-                </button>
-                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="loadSampleImage('DAREU')">
-                    <i class="fa-solid fa-keyboard"></i> Phím cơ (88%)
-                </button>
+            <div style="display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted);">Thử nhanh ảnh mẫu:</span>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11.5px;" onclick="loadSampleImage('CSDL')">Sách CSDL (94%)</button>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11.5px;" onclick="loadSampleImage('CASIO')">Casio 580 (98%)</button>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11.5px;" onclick="loadSampleImage('DAREU')">Phím cơ (88%)</button>
             </div>
 
             <!-- Upload Box -->
-            <div class="inspect-upload-box" onclick="document.getElementById('imageUploadInput').click()">
-                <div id="previewContainer" style="display: none; margin-bottom: 10px;">
-                    <img id="imagePreview" src="" alt="Preview" style="max-height: 160px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); object-fit: contain;">
+            <div class="inspect-upload-box" onclick="document.getElementById('imageUploadInput').click()" style="position: relative; overflow: hidden;">
+                <div id="previewContainer" style="display: none; margin-bottom: 10px; position: relative;">
+                    <img id="imagePreview" src="" alt="Preview" style="max-height: 170px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); object-fit: contain;">
+                    <div id="laserScanBar" class="laser-scanner-line" style="display: none;"></div>
                 </div>
                 <div id="uploadPlaceholder">
-                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 28px; color: #60A5FA; margin-bottom: 6px;"></i>
-                    <p style="font-weight: 600; font-size: 13.5px;">Bấm để chọn ảnh sản phẩm từ thiết bị</p>
-                    <span style="font-size: 11px; color: var(--text-dim);">Hỗ trợ định dạng JPG, PNG, WEBP</span>
+                    <p style="font-weight: 600; font-size: 13.5px; color: var(--text-main); margin-bottom: 2px;">Bấm để chọn ảnh từ thiết bị</p>
+                    <span style="font-size: 11.5px; color: var(--text-muted);">AI tự động nhận diện đồ dùng, độ mới & định giá</span>
                 </div>
                 <input type="file" id="imageUploadInput" style="display: none;" accept="image/*" onchange="handleImageSelected(event)">
             </div>
 
             <!-- Kết quả quét AI hiển thị ở đây -->
-            <div id="aiResultBox" style="display: none; background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-top: 14px;">
-                <h4 style="color: var(--primary-green); margin-bottom: 8px; font-size: 14.5px;">
-                    <i class="fa-solid fa-circle-check"></i> Kết Quả Thẩm Định Chi Tiết
-                </h4>
+            <div id="aiResultBox" style="display: none; background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-top: 14px;">
                 <div id="aiResultDetails" style="font-size: 13px; line-height: 1.6;"></div>
             </div>
 
             <!-- FORM NHẬP THÔNG TIN SẢN PHẨM ĐĂNG BÁN -->
-            <div id="productFormFields" style="margin-top: 18px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
-                <h4 style="font-size: 15px; margin-bottom: 12px; color: #60A5FA;">
-                    <i class="fa-solid fa-file-lines"></i> Thông Tin Sản Phẩm Đăng Bán
+            <div id="productFormFields" style="margin-top: 16px; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+                <h4 style="font-size: 14px; margin-bottom: 12px; color: var(--text-main); font-weight: 600;">
+                    Thông Tin Sản Phẩm Đăng Bán
                 </h4>
 
                 <div class="form-group">
@@ -219,9 +219,9 @@
                     <textarea id="newProductDesc" class="form-control" rows="2" placeholder="Ghi chú bài tập đầy đủ, sách bảo quản tốt...">Sách bảo quản tốt, không quăn mép, có ghi chú bài tập đầy đủ cho K11, K12.</textarea>
                 </div>
 
-                <div style="margin-top: 18px; display: flex; gap: 10px;">
-                    <button class="btn btn-primary" style="flex: 1; justify-content: center; padding: 10px;" onclick="submitNewProduct()">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Đăng Bán Lên Sàn Chợ HUNRE
+                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                    <button class="btn btn-primary" style="flex: 1; justify-content: center; padding: 9px;" onclick="submitNewProduct()">
+                        Đăng Bán Lên Sàn Chợ HUNRE
                     </button>
                     <button class="btn btn-secondary" onclick="closeAiInspectModal()">Hủy</button>
                 </div>
@@ -235,8 +235,7 @@
     <div class="modal-overlay" id="editProductModal">
         <div class="modal-content" style="max-width: 550px;">
             <button class="modal-close" onclick="closeEditModal()">&times;</button>
-            <h3 style="font-size: 19px; margin-bottom: 6px; color: #FFFFFF;">
-                <i class="fa-solid fa-pen-to-square" style="color: #60A5FA;"></i> 
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
                 Chỉnh Sửa Thông Tin Tin Đăng
             </h3>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
@@ -273,7 +272,7 @@
 
             <div style="margin-top: 18px; display: flex; gap: 10px;">
                 <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="submitEditProduct()">
-                    <i class="fa-solid fa-floppy-disk"></i> Lưu Thay Đổi
+                    Lưu Thay Đổi
                 </button>
                 <button class="btn btn-secondary" onclick="closeEditModal()">Đóng</button>
             </div>
@@ -286,34 +285,33 @@
     <div class="modal-overlay" id="negotiateModal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeNegotiateModal()">&times;</button>
-            <h3 style="font-size: 20px; margin-bottom: 6px; color: #FFFFFF;">
-                <i class="fa-solid fa-comments-dollar" style="color: #60A5FA;"></i> 
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
                 Đàm Phán Giá Với Người Bán (AI Agent)
             </h3>
-            <p id="negotiateItemTitle" style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;"></p>
+            <p id="negotiateItemTitle" style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;"></p>
 
-            <div style="background: rgba(0,0,0,0.25); padding: 16px; border-radius: var(--radius-md); margin-bottom: 18px;">
-                <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px;">
+            <div style="background: var(--secondary-gray); border: 1px solid var(--border-subtle); padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
                     <span style="color: var(--text-muted);">Giá niêm yết hiện tại:</span>
-                    <strong id="negotiateCurrentPrice" style="color: var(--primary-green); font-size: 15px;"></strong>
+                    <strong id="negotiateCurrentPrice" style="color: var(--text-main); font-size: 15px;"></strong>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-dim);">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
                     <span>Điểm uy tín của bạn:</span>
-                    <span style="color: #60A5FA;" id="negotiateTrustScore">520 Điểm (Bậc Bạc)</span>
+                    <span style="color: var(--text-main); font-weight: 600;" id="negotiateTrustScore">520 Điểm (Bậc Bạc)</span>
                 </div>
             </div>
 
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-secondary);">Mức giá bạn muốn đề xuất (VNĐ):</label>
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12.5px; margin-bottom: 6px; color: var(--text-secondary);">Mức giá bạn muốn đề xuất (VNĐ):</label>
                 <input type="number" id="buyerOfferInput" class="form-control" placeholder="Ví dụ: 65000">
             </div>
 
             <!-- Khu vực phản hồi của AI -->
-            <div id="negotiationFeedback" style="display: none; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; margin-bottom: 16px;"></div>
+            <div id="negotiationFeedback" style="display: none; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; margin-bottom: 14px; border: 1px solid var(--border-subtle); background: var(--secondary-gray);"></div>
 
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="submitNegotiation()">
-                    <i class="fa-solid fa-paper-plane"></i> Gửi Đề Xuất Giá
+                    Gửi Đề Xuất Giá
                 </button>
                 <button class="btn btn-secondary" onclick="closeNegotiateModal()">Đóng</button>
             </div>
@@ -326,16 +324,221 @@
     <div class="modal-overlay" id="userSwitchModal">
         <div class="modal-content" style="max-width: 480px;">
             <button class="modal-close" onclick="closeUserModal()">&times;</button>
-            <h3 style="font-size: 18px; margin-bottom: 6px; color: #FFFFFF;">
-                <i class="fa-solid fa-users" style="color: var(--primary-green);"></i> 
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
                 Chọn Tài Khoản Sinh Viên HUNRE
             </h3>
-            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 14px;">
                 Chuyển đổi giữa các bạn sinh viên để thử nghiệm quyền đăng bán, trả giá và theo dõi điểm uy tín Trust Score.
             </p>
 
-            <div id="usersListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+            <div id="usersListContainer" style="display: flex; flex-direction: column; gap: 8px;">
                 <!-- Render động bởi app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL 5: GIỎ HÀNG CÓ TÍNH TIỀN (LAB 04) -->
+    <!-- ============================================================= -->
+    <div class="modal-overlay" id="cartModal">
+        <div class="modal-content" style="max-width: 580px;">
+            <button class="modal-close" onclick="closeCartDrawer()">&times;</button>
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
+                Giỏ Hàng Của Bạn (Lab 04)
+            </h3>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 14px;">
+                Cập nhật số lượng, áp dụng mã voucher và tính tiền tự động
+            </p>
+
+            <!-- Danh sách món đồ trong giỏ -->
+            <div id="cartItemsContainer" style="max-height: 280px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Render động bởi app.js -->
+            </div>
+
+            <!-- Tùy chọn Vận Chuyển (Lab 05) -->
+            <div style="background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+                    Phương Thức Nhận Hàng (Lab 05):
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; background: #FFFFFF; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); color: var(--text-main);">
+                        <input type="radio" name="cartShippingMethod" value="HUB_PICKUP" checked onchange="updateCartTotals()">
+                        <span><strong>Trạm Hub CS1</strong> (0đ)</span>
+                    </label>
+                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; background: #FFFFFF; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); color: var(--text-main);">
+                        <input type="radio" name="cartShippingMethod" value="GHN_DELIVERY" onchange="updateCartTotals()">
+                        <span><strong>Giao GHN</strong> (25.000đ)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Voucher Box -->
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                <input type="text" id="voucherCodeInput" class="form-control" placeholder="Mã giảm giá (ví dụ: HUNRE2026)" style="flex: 1; text-transform: uppercase;">
+                <button class="btn btn-secondary" onclick="applyCartVoucher()" style="padding: 0 16px;">Áp dụng</button>
+            </div>
+            <div id="voucherAlert" style="display: none; font-size: 12px; margin-bottom: 10px;"></div>
+
+            <!-- Bảng Tính Tiền -->
+            <div style="background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: var(--text-secondary);">
+                    <span>Tiền hàng:</span>
+                    <strong id="cartSubtotal" style="color: var(--text-main);">0đ</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: var(--text-secondary);">
+                    <span>Phí vận chuyển:</span>
+                    <span id="cartShippingFee" style="color: var(--text-main);">0đ</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-secondary);" id="voucherRow">
+                    <span>Giảm giá voucher:</span>
+                    <span id="cartDiscount" style="color: var(--text-muted); font-weight: 600;">-0đ</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border-subtle); font-size: 14.5px;">
+                    <strong style="color: var(--text-main);">Tổng thanh toán:</strong>
+                    <strong id="cartFinalTotal" style="color: var(--text-main); font-size: 16px;">0đ</strong>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="proceedToCheckout()">
+                    Tiến Hành Đặt Hàng
+                </button>
+                <button class="btn btn-secondary" onclick="closeCartDrawer()">Tiếp tục xem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL 6: ĐẶT HÀNG & CHỌN CỔNG THANH TOÁN (LAB 06 & LAB 09) -->
+    <!-- ============================================================= -->
+    <div class="modal-overlay" id="checkoutModal">
+        <div class="modal-content" style="max-width: 540px;">
+            <button class="modal-close" onclick="closeCheckoutModal()">&times;</button>
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
+                Xác Nhận Đặt Hàng & Thanh Toán
+            </h3>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 14px;">
+                Hỗ trợ 3 cổng thanh toán: Ký Quỹ Escrow, Ví MoMo QR Sandbox, hoặc Tiền mặt COD
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-secondary);">Họ và tên người nhận:</label>
+                    <input type="text" id="checkoutName" class="form-control" placeholder="Nguyễn Văn An">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-secondary);">Số điện thoại:</label>
+                    <input type="text" id="checkoutPhone" class="form-control" placeholder="0981234567">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-secondary);">Địa chỉ nhận hàng:</label>
+                <input type="text" id="checkoutAddress" class="form-control" placeholder="Ví dụ: KTX Nhà B3 hoặc Số 41A Phú Diễn, Bắc Từ Liêm">
+            </div>
+
+            <!-- Lựa chọn Cổng Thanh Toán (Lab 06 & 09) -->
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                    Chọn Cổng Thanh Toán (Lab 06):
+                </label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--secondary-gray); border: 1px solid var(--border-subtle); cursor: pointer;">
+                        <input type="radio" name="checkoutGateway" value="ESCROW" checked>
+                        <div>
+                            <strong style="color: var(--text-main); font-size: 13px;">Ký Quỹ Smart Escrow (Khuyên dùng)</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Khóa tiền an toàn tại Trạm Hub, chỉ giải ngân khi hài lòng với đồ dùng</div>
+                        </div>
+                    </label>
+
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--secondary-gray); border: 1px solid var(--border-subtle); cursor: pointer;">
+                        <input type="radio" name="checkoutGateway" value="MOMO">
+                        <div>
+                            <strong style="color: var(--text-main); font-size: 13px;">Ví Điện Tử MoMo (Sandbox QR)</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Quét mã QR thanh toán nhanh qua ứng dụng MoMo</div>
+                        </div>
+                    </label>
+
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--secondary-gray); border: 1px solid var(--border-subtle); cursor: pointer;">
+                        <input type="radio" name="checkoutGateway" value="COD">
+                        <div>
+                            <strong style="color: var(--text-main); font-size: 13px;">Thanh Toán Khi Nhận Hàng (COD)</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Trả tiền mặt cho shipper khi nhận được đồ</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-secondary);">Ghi chú cho người bán / shipper:</label>
+                <input type="text" id="checkoutNote" class="form-control" placeholder="Ví dụ: Gọi trước khi giao, để đồ vào ô tủ...">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="submitOrderCheckout()">
+                    Hoàn Tất Đặt Hàng (<span id="checkoutTotalBtn">0đ</span>)
+                </button>
+                <button class="btn btn-secondary" onclick="closeCheckoutModal()">Quay lại</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL 7: DANH SÁCH YÊU THÍCH (WISHLIST) -->
+    <!-- ============================================================= -->
+    <div class="modal-overlay" id="wishlistModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <button class="modal-close" onclick="closeWishlistModal()">&times;</button>
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">
+                Danh Sách Yêu Thích Của Bạn
+            </h3>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+                Các món đồ dùng học tập bạn đã lưu lại để theo dõi
+            </p>
+
+            <div id="wishlistItemsContainer" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+                <!-- Render động -->
+            </div>
+
+            <button class="btn btn-secondary" style="width: 100%; justify-content: center;" onclick="closeWishlistModal()">Đóng</button>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL 8: ĐÁNH GIÁ & PHẢN HỒI SẢN PHẨM (REVIEWS & RATINGS) -->
+    <!-- ============================================================= -->
+    <div class="modal-overlay" id="reviewsModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="modal-close" onclick="closeReviewsModal()">&times;</button>
+            <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);" id="reviewsProductTitle">
+                Đánh Giá Sản Phẩm
+            </h3>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+                Ý kiến thực tế từ các bạn sinh viên đã giao dịch
+            </p>
+
+            <!-- Reviews list -->
+            <div id="reviewsListContainer" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+                <!-- Render động -->
+            </div>
+
+            <!-- Form gửi đánh giá -->
+            <div style="background: var(--secondary-gray); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px;">
+                <h4 style="font-size: 13px; margin-bottom: 8px; color: var(--text-main); font-weight: 600;">Gửi Nhận Xét Của Bạn</h4>
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 12px; color: var(--text-secondary);">Chấm điểm:</span>
+                    <select id="reviewRatingSelect" class="form-control" style="width: 110px; padding: 6px 8px;">
+                        <option value="5">★★★★★ 5 sao</option>
+                        <option value="4">★★★★☆ 4 sao</option>
+                        <option value="3">★★★☆☆ 3 sao</option>
+                        <option value="2">★★☆☆☆ 2 sao</option>
+                        <option value="1">★☆☆☆☆ 1 sao</option>
+                    </select>
+                </div>
+                <textarea id="reviewCommentInput" class="form-control" rows="2" placeholder="Nhận xét về chất lượng đồ, tình trạng thực tế..." style="width: 100%; margin-bottom: 10px;"></textarea>
+                <button class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 12.5px;" onclick="submitProductReview()">
+                    Gửi Đánh Giá
+                </button>
             </div>
         </div>
     </div>
