@@ -1,0 +1,325 @@
+{
+  "info": {
+    "name": "HUNRE Hub Laravel — isolated demo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run Hub demo on 8004 first. QR expires at 30-second boundary; send immediately. Collection consumes the selected demo order. Never use demo credentials in production."
+  },
+  "variable": [
+    {
+      "key": "hubBase",
+      "value": "http://127.0.0.1:8004/api/v1/hub"
+    },
+    {
+      "key": "orderCode",
+      "value": "ORD-DEMO-2"
+    },
+    {
+      "key": "staffToken",
+      "value": ""
+    },
+    {
+      "key": "sellerToken",
+      "value": ""
+    },
+    {
+      "key": "buyerToken",
+      "value": ""
+    },
+    {
+      "key": "sellerQrPayload",
+      "value": ""
+    },
+    {
+      "key": "buyerQrPayload",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Danh sách trạm",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{hubBase}}/stations"
+      }
+    },
+    {
+      "name": "2. Đăng nhập nhân viên",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"hub.cs1@hunre.edu.vn\",\n  \"password\": \"password\"\n}"
+        },
+        "url": "{{hubBase}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200)pm.collectionVariables.set(\"staffToken\",pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Đăng nhập người bán",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"seller@hunre.edu.vn\",\n  \"password\": \"password\"\n}"
+        },
+        "url": "{{hubBase}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200)pm.collectionVariables.set(\"sellerToken\",pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. QR người bán",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{sellerToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/orders/{{orderCode}}/dynamic-qr?role=SELLER"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"QR issued\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200)pm.collectionVariables.set(\"sellerQrPayload\",pm.response.json().data.qr_payload);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Check-in",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{hubBase}}/checkin",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_payload\": \"{{sellerQrPayload}}\",\n  \"scan_type\": \"CHECKIN\",\n  \"size_type\": \"MEDIUM\"\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Đăng nhập người mua",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"buyer@hunre.edu.vn\",\n  \"password\": \"password\"\n}"
+        },
+        "url": "{{hubBase}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200)pm.collectionVariables.set(\"buyerToken\",pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. QR người mua",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{buyerToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/orders/{{orderCode}}/dynamic-qr?role=BUYER"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"QR issued\",()=>pm.response.to.have.status(200));",
+              "if(pm.response.code===200)pm.collectionVariables.set(\"buyerQrPayload\",pm.response.json().data.qr_payload);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Check-out",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{hubBase}}/checkout",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_payload\": \"{{buyerQrPayload}}\",\n  \"scan_type\": \"CHECKOUT\"\n}"
+        }
+      }
+    },
+    {
+      "name": "9. Tình trạng tủ",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/lockers/1"
+      }
+    },
+    {
+      "name": "Đăng xuất staffToken",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{staffToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/auth/logout"
+      }
+    },
+    {
+      "name": "Đăng xuất sellerToken",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{sellerToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/auth/logout"
+      }
+    },
+    {
+      "name": "Đăng xuất buyerToken",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{buyerToken}}"
+          }
+        ],
+        "url": "{{hubBase}}/auth/logout"
+      }
+    }
+  ]
+}

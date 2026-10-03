@@ -118,7 +118,8 @@
                 </p>
 
                 <div class="qr-box">
-                    <img id="dynamicQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=HUNRE:ORD-HUNRE-98471:BUYER:A93DF72B" alt="Mã QR Check-out" style="width: 170px; height: 170px; display: block;">
+                    <a href="hub-qr.html?role=BUYER" id="hubQrLoginLink">Đăng nhập Hub / tạo QR gửi và nhận đồ</a>
+                    <img id="dynamicQrImage" alt="Mã QR Check-out" style="width: 170px; height: 170px; display: none;">
                 </div>
 
                 <div style="margin-top: 12px; font-size: 13.5px; color: var(--accent-orange);">
@@ -206,16 +207,21 @@
         // Vòng lặp lấy Dynamic QR từ Hub Service
         async function fetchDynamicQr() {
             try {
-                const res = await fetch(`${API_BASE_URL}/hub/orders/${currentOrderCode}/dynamic-qr?user_id=1&role=BUYER`);
+                const token=sessionStorage.getItem('hunreHubStudentToken');
+                if(!token) throw new Error('Đăng nhập Hub tại trang QR gửi/nhận đồ để lấy mã thật.');
+                const res = await fetch(`${API_BASE_URL}/hub/orders/${encodeURIComponent(currentOrderCode)}/dynamic-qr?role=BUYER`, {headers:{Accept:'application/json',Authorization:`Bearer ${token}`}});
+                if(!res.ok) {const error=await res.json();throw new Error(error.message || 'Không thể lấy mã QR.');}
                 if (res.ok) {
                     const data = await res.json();
                     const qrData = data.data;
                     document.getElementById('hmacToken').innerText = qrData.token;
                     document.getElementById('dynamicQrImage').src = qrData.qr_image_url;
+                    document.getElementById('dynamicQrImage').style.display = 'block';
                     document.getElementById('countdownSeconds').innerText = qrData.expires_in_seconds;
                 }
             } catch (err) {
-                console.warn('Fallback dynamic QR:', err);
+                document.getElementById('dynamicQrImage').style.display='none';
+                document.getElementById('hmacToken').textContent=err.message;
             }
         }
 

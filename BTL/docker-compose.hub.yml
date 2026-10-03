@@ -1,0 +1,8 @@
+# Optional Hub-only configuration. Original Compose and ports remain unchanged.
+# Set HUB_QR_SECRET in your shell before starting.
+services:
+  hub-service:
+    environment:
+      HUB_QR_SECRET: ${HUB_QR_SECRET:?Set a random HUB_QR_SECRET of at least 32 characters}
+      APP_ENV: production
+      APP_DEBUG: "false"

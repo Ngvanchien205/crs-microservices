@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>QR bàn giao tại Hub | HUNRE</title>
+ <link rel="stylesheet" href="../css/style.css">
+ <style>main{max-width:680px;margin:40px auto;padding:24px}input,select,textarea{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}button{margin:8px 4px 8px 0}#qrImage{background:white;margin:16px auto;width:220px;display:none}textarea{font-family:monospace}label{display:block}</style>
+</head>
+<body>
+ <main class="glass-panel">
+  <h1>QR gửi / nhận hàng tại Hub</h1>
+  <p>Đăng nhập bằng tài khoản chủ đơn. QR đổi theo cửa sổ 30 giây; chỉ dùng khi đơn đã ký quỹ hoặc đã lưu tại Hub.</p>
+  <form id="loginForm">
+   <label>Email HUNRE<input id="email" type="email" autocomplete="username" required></label>
+   <label>Mật khẩu<input id="password" type="password" autocomplete="current-password" required></label>
+   <button class="btn btn-primary" type="submit">Đăng nhập</button>
+   <button class="btn btn-secondary" id="logout" type="button">Đăng xuất</button>
+  </form>
+  <form id="qrForm">
+   <label>Mã đơn<input id="orderCode" maxlength="50" pattern="[A-Za-z0-9_-]+" required></label>
+   <label>Vai trò bàn giao<select id="role"><option value="SELLER">Người bán gửi đồ</option><option value="BUYER">Người mua nhận đồ</option></select></label>
+   <button class="btn btn-primary" type="submit">Tạo QR</button>
+  </form>
+  <p id="status" role="status">Vui lòng đăng nhập.</p>
+  <img id="qrImage" alt="QR bàn giao hàng tại Hub">
+  <p id="countdown"></p>
+  <label>Nội dung QR (dán vào máy quét nếu thiết bị không hỗ trợ camera)<textarea id="payload" readonly rows="3"></textarea></label>
+  <a href="../index.html">Về chợ sinh viên</a>
+ </main>
+ <script>
+  const tokenKey='hunreHubStudentToken';
+  const api='/api/v1/hub';
+  let timer=null,expiry=0,activeOrder='',activeRole='',loading=false;
+  const byId=id=>document.getElementById(id);
+  const status=message=>byId('status').textContent=message;
+  function clearQr(){byId('qrImage').style.display='none';byId('qrImage').removeAttribute('src');byId('payload').value='';byId('countdown').textContent='';}
+  async function request(path,options={}){
+   const response=await fetch(api+path,{...options,headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':`Bearer ${sessionStorage.getItem(tokenKey)||''}`}});
+   const data=await response.json();
+   if(!response.ok || !data.success){if(response.status===401)sessionStorage.removeItem(tokenKey);throw new Error(data.message||`HTTP ${response.status}`);}
+   return data;
+  }
+  byId('loginForm').addEventListener('submit',async event=>{
+   event.preventDefault();clearInterval(timer);clearQr();
+   try{const data=await request('/auth/login',{method:'POST',body:JSON.stringify({email:byId('email').value.trim(),password:byId('password').value})});sessionStorage.setItem(tokenKey,data.token);byId('password').value='';status(`Đã đăng nhập: ${data.user.full_name}.`);}catch(error){status(error.message);}
+  });
+  byId('logout').addEventListener('click',async()=>{try{await request('/auth/logout',{method:'POST'});}catch(_){}sessionStorage.removeItem(tokenKey);clearInterval(timer);clearQr();status('Đã đăng xuất.');});
+  async function refreshQr(){
+   if(loading)return;loading=true;
+   try{
+    const result=await request(`/orders/${encodeURIComponent(activeOrder)}/dynamic-qr?role=${activeRole}`);
+    const data=result.data;expiry=Date.now()+data.expires_in_seconds*1000;
+    byId('qrImage').src=data.qr_image_url;byId('qrImage').style.display='block';byId('payload').value=data.qr_payload;
+    status(`Đơn ${data.order_code} · ${data.role==='SELLER'?'Gửi đồ':'Nhận đồ'}`);
+   }catch(error){clearQr();clearInterval(timer);status(error.message);}finally{loading=false;}
+  }
+  byId('qrForm').addEventListener('submit',async event=>{
+   event.preventDefault();clearInterval(timer);clearQr();activeOrder=byId('orderCode').value.trim();activeRole=byId('role').value;
+   await refreshQr();
+   if(!byId('payload').value)return;
+   timer=setInterval(()=>{const seconds=Math.max(0,Math.ceil((expiry-Date.now())/1000));byId('countdown').textContent=`QR còn hiệu lực khoảng ${seconds} giây.`;if(seconds===0){clearQr();refreshQr();}},250);
+  });
+  const params=new URLSearchParams(location.search);
+  byId('orderCode').value=params.get('order_code')||'';
+  if(params.get('role')==='BUYER')byId('role').value='BUYER';
+  if(sessionStorage.getItem(tokenKey))status('Đã có phiên Hub. Nhập mã đơn và tạo QR.');
+ </script>
+</body>
+</html>

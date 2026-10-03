@@ -33,7 +33,19 @@
     </header>
 
     <div class="section-container" style="max-width: 1100px; padding-top: 2rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <section class="glass-panel" style="padding:20px; margin-bottom:20px;">
+            <h3>Đăng nhập nhân viên Hub</h3>
+            <form id="hubLoginForm" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">
+                <input id="hubEmail" type="email" autocomplete="username" placeholder="Email HUNRE" required aria-label="Email nhân viên">
+                <input id="hubPassword" type="password" autocomplete="current-password" placeholder="Mật khẩu" required aria-label="Mật khẩu">
+                <button class="btn btn-primary" type="submit">Đăng nhập</button>
+                <button class="btn btn-secondary" type="button" onclick="logoutHub()">Đăng xuất</button>
+            </form>
+            <label>Trạm Hub: <select id="hubStation" onchange="loadLockers()" aria-label="Trạm Hub"></select></label>
+            <p id="hubNotice" role="status" style="margin-top:10px;">Vui lòng đăng nhập để quản lý tủ và bàn giao hàng.</p>
+            <a href="/pages/hub-qr.html" target="_blank" rel="noopener">Trang sinh viên tạo QR gửi/nhận đồ</a>
+        </section>
+        <div id="hubWorkspace" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
             <!-- MÁY QUÉT QR CHECK-IN / CHECK-OUT -->
             <div class="glass-panel" style="padding: 24px; text-align: center;">
                 <h3 style="font-size: 17px; margin-bottom: 12px; color: #60A5FA;">
@@ -62,7 +74,10 @@
                 <!-- Input mã đơn hàng thủ công hoặc giả lập -->
                 <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px; text-align: left;">
                     <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Mã đơn hàng cần quét:</label>
-                    <input type="text" id="manualOrderCode" value="ORD-HUNRE-98471" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); border-radius: 4px; color: #FFF; font-size: 13px; font-weight: 600;">
+                    <input type="text" id="manualOrderCode" placeholder="Mã đơn hàng" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); border-radius: 4px; color: #FFF; font-size: 13px; font-weight: 600;">
+                    <label for="hubQrPayload">Nội dung QR do sinh viên cung cấp:</label>
+                    <textarea id="hubQrPayload" rows="3" placeholder="HUNRE:ORD-...:ID:SELLER hoặc BUYER:TOKEN" style="width:100%;margin:8px 0;"></textarea>
+                    <label>Kích cỡ tủ khi gửi: <select id="hubSize"><option value="">Tự chọn tủ trống</option><option>SMALL</option><option>MEDIUM</option><option>LARGE</option></select></label>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
@@ -103,6 +118,14 @@
     </div>
 
     <style>
+        #hubLoginForm input, #hubStation, #hubSize, #hubQrPayload {
+            padding: 9px; background: #172132; color: #fff; border: 1px solid #596579; border-radius: 6px;
+        }
+        @media(max-width:720px) {
+            #hubWorkspace { grid-template-columns: 1fr !important; }
+            .navbar { flex-wrap: wrap; gap: 12px; }
+            #hubLoginForm input { width: 100%; }
+        }
         @keyframes scanLine {
             0% { top: 0%; opacity: 0.8; }
             50% { top: 98%; opacity: 1; }
@@ -112,20 +135,64 @@
 
     <script>
         const API_BASE_URL = '/api/v1';
+        const HUB_TOKEN_KEY = 'hunreHubStaffToken';
+        let actionBusy = false;
+        let detectorTimer = null;
+        function notice(message) { document.getElementById('hubNotice').textContent = message; }
+        function hubHeaders() { return {'Content-Type':'application/json','Accept':'application/json','Authorization':`Bearer ${sessionStorage.getItem(HUB_TOKEN_KEY) || ''}`}; }
+        async function hubRequest(path, options = {}) {
+            const response = await fetch(`${API_BASE_URL}/hub${path}`, {...options, headers:hubHeaders()});
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                if (response.status === 401) sessionStorage.removeItem(HUB_TOKEN_KEY);
+                throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+            }
+            return data;
+        }
+        async function logoutHub() {
+            try { await hubRequest('/auth/logout', {method:'POST'}); } catch (_) {}
+            sessionStorage.removeItem(HUB_TOKEN_KEY);
+            document.getElementById('lockersGridContainer').textContent = 'Đã đăng xuất.';
+            notice('Đã đăng xuất.');
+        }
+        function safeText(value) { const el=document.createElement('span'); el.textContent=String(value ?? ''); return el.innerHTML; }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadLockers();
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('hubLoginForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                try {
+                    const data=await hubRequest('/auth/login',{method:'POST',body:JSON.stringify({email:document.getElementById('hubEmail').value.trim(),password:document.getElementById('hubPassword').value})});
+                    if (!['HUB_STAFF','ADMIN'].includes(data.user.role)) {
+                        sessionStorage.setItem(HUB_TOKEN_KEY,data.token);
+                        await logoutHub();
+                        throw new Error('Tài khoản này không phải nhân viên Hub.');
+                    }
+                    sessionStorage.setItem(HUB_TOKEN_KEY,data.token);
+                    document.getElementById('hubPassword').value='';
+                    notice(`Đã đăng nhập: ${data.user.full_name}.`);
+                    await loadLockers();
+                } catch(error) { notice(error.message); }
+            });
+            try {
+                const response=await fetch(`${API_BASE_URL}/hub/stations`);
+                const data=await response.json();
+                if (!response.ok || !data.success) throw new Error('Không tải được trạm Hub.');
+                const select=document.getElementById('hubStation');
+                (data.data || []).forEach(station => select.add(new Option(station.name,station.id)));
+                if(sessionStorage.getItem(HUB_TOKEN_KEY)) await loadLockers();
+                else document.getElementById('lockersGridContainer').textContent='Vui lòng đăng nhập.';
+            } catch(error) { notice(error.message); }
         });
 
         async function loadLockers() {
             const container = document.getElementById('lockersGridContainer');
             try {
-                const res = await fetch(`${API_BASE_URL}/hub/lockers`);
-                if (!res.ok) throw new Error('Lockers fetch error');
-                const data = await res.json();
+                const data = await hubRequest(`/lockers/${document.getElementById('hubStation').value || 1}`);
                 renderLockers(data.lockers || []);
             } catch (err) {
                 console.warn('Lỗi nạp lockers:', err);
+                container.textContent = err.message;
+                notice(err.message);
             }
         }
 
@@ -138,15 +205,15 @@
                 const borderColor = isOccupied ? 'var(--danger-red)' : 'var(--primary-green)';
                 const statusColor = isOccupied ? 'var(--danger-red)' : 'var(--primary-green)';
                 const statusIcon = isOccupied ? 'fa-lock' : 'fa-circle-check';
-                const statusText = isOccupied ? `Đang chứa: ${l.current_order || 'Đơn hàng'}` : 'Đang trống';
+                const statusText = isOccupied ? `Đang chứa: ${safeText(l.current_order || 'Đơn hàng')}` : (l.status === 'MAINTENANCE' ? 'Đang bảo trì' : 'Đang trống');
 
                 return `
                     <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: var(--radius-sm); border-left: 4px solid ${borderColor}; transition: var(--transition-fast);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 14px; font-weight: 700; color: #FFF;">${l.locker_code}</span>
-                            <span style="font-size: 11px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: var(--text-dim);">${l.size_type}</span>
+                            <span style="font-size: 14px; font-weight: 700; color: #FFF;">${safeText(l.locker_code)}</span>
+                            <span style="font-size: 11px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: var(--text-dim);">${safeText(l.size_type)}</span>
                         </div>
-                        <div style="font-size: 11.5px; color: var(--text-muted); margin: 4px 0;">${l.description || 'Ô tủ lưu đồ'}</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin: 4px 0;">${safeText(l.description || 'Ô tủ lưu đồ')}</div>
                         <div style="font-size: 12px; color: ${statusColor}; font-weight: 500;">
                             <i class="fa-solid ${statusIcon}"></i> ${statusText}
                         </div>
@@ -156,33 +223,35 @@
         }
 
         async function handleHubAction(type) {
-            const code = document.getElementById('manualOrderCode').value.trim() || 'ORD-HUNRE-98471';
+            if (actionBusy) return;
+            const code = document.getElementById('manualOrderCode').value.trim();
+            const payload = document.getElementById('hubQrPayload').value.trim();
+            if (!payload) { notice('Cần quét hoặc dán mã QR còn hiệu lực của sinh viên.'); return; }
+            actionBusy = true;
 
             try {
-                const endpoint = (type === 'CHECKIN') ? `${API_BASE_URL}/hub/checkin` : `${API_BASE_URL}/hub/checkout`;
-                const res = await fetch(endpoint, {
+                const endpoint = (type === 'CHECKIN') ? '/checkin' : '/checkout';
+                const body = {qr_payload:payload,scan_type:type};
+                if(code) body.order_code=code;
+                if(type==='CHECKIN' && document.getElementById('hubSize').value) body.size_type=document.getElementById('hubSize').value;
+                const data = await hubRequest(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        order_code: code,
-                        scan_type: type
-                    })
+                    body: JSON.stringify(body)
                 });
-
-                if (!res.ok) throw new Error('Action failed');
-                const data = await res.json();
-
-                alert(`MÁY QUÉT ĐỌC MÃ QR TOTP THÀNH CÔNG:\n\n• Mã đơn: ${code}\n• Hành động: ${type === 'CHECKIN' ? 'Người bán gửi đồ (Check-in)' : 'Người mua nhận đồ (Check-out)'}\n• Chi tiết: ${data.message}`);
+                notice(`${data.order_code}: ${data.message} Ô tủ: ${data.locker_code}.`);
+                document.getElementById('hubQrPayload').value='';
                 
                 await loadLockers(); // Cập nhật lại màu ô tủ ngay trên màn hình!
             } catch (err) {
-                alert(`Thao tác thành công cho đơn ${code}! Trạng thái ô tủ đã được cập nhật.`);
-                await loadLockers();
+                notice(`Không thực hiện được: ${err.message}`);
+            } finally {
+                actionBusy = false;
             }
         }
 
         // Camera WebRTC thực
         let cameraStream = null;
+        window.addEventListener('pagehide', () => { clearInterval(detectorTimer); cameraStream?.getTracks().forEach(track=>track.stop()); });
         async function toggleCamera() {
             const video = document.getElementById('webcamVideo');
             const placeholder = document.getElementById('cameraPlaceholder');
@@ -195,11 +264,23 @@
                     video.style.display = 'block';
                     placeholder.style.display = 'none';
                     btnText.innerText = 'Tắt Camera';
+                    if ('BarcodeDetector' in window) {
+                        const detector = new BarcodeDetector({formats:['qr_code']});
+                        detectorTimer=setInterval(async () => {
+                            if(video.readyState < 2) return;
+                            try {
+                                const codes=await detector.detect(video);
+                                const qr=codes.find(item=>item.rawValue.startsWith('HUNRE:'));
+                                if(qr) { document.getElementById('hubQrPayload').value=qr.rawValue; document.getElementById('manualOrderCode').value=qr.rawValue.split(':')[1]; notice('Đã đọc QR. Kiểm tra rồi chọn gửi hoặc nhận đồ.'); }
+                            } catch(_) {}
+                        },500);
+                    } else notice('Trình duyệt chưa hỗ trợ đọc QR tự động. Hãy dán nội dung QR từ trang sinh viên.');
                 } catch (e) {
                     alert('Không thể mở camera trên thiết bị này (Có thể trình duyệt chưa cấp quyền). Bạn vẫn có thể dùng các nút quét trực tiếp!');
                 }
             } else {
                 cameraStream.getTracks().forEach(track => track.stop());
+                clearInterval(detectorTimer);
                 cameraStream = null;
                 video.style.display = 'none';
                 placeholder.style.display = 'block';
