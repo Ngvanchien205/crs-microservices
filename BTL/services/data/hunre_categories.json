@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1,
+        "name": "Giáo Trình & Tài Liệu",
+        "slug": "giao-trinh",
+        "icon": "fa-book-open",
+        "description": "Sách giáo trình các khoa Môi trường, Trắc địa, CNTT, Đất đai HUNRE"
+    },
+    {
+        "id": 2,
+        "name": "Thiết Bị Điện Tử & Laptop",
+        "slug": "thiet-bi-dien-tu",
+        "icon": "fa-laptop",
+        "description": "Laptop, màn hình máy tính, chuột phím cơ, máy tính cầm tay Casio"
+    },
+    {
+        "id": 3,
+        "name": "Dụng Cụ Học Tập & Đồ Dùng",
+        "slug": "dung-cu-hoc-tap",
+        "icon": "fa-ruler-combined",
+        "description": "Thước vẽ kỹ thuật, bảng vẽ đồ họa, đèn bàn LED sinh viên"
+    },
+    {
+        "id": 4,
+        "name": "Đồ Dùng Tiện Ích Ký Túc Xá",
+        "slug": "do-dung-ktx",
+        "icon": "fa-couch",
+        "description": "Quạt điện mini, ấm đun siêu tốc, giá sách để bàn"
+    }
+]
